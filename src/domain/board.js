@@ -114,7 +114,11 @@ export function saveBoardData(d) {
 }
 
 export function getScriptUrl() {
-  try { return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}').scriptUrl || '' } catch { return '' }
+  try {
+    return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}').scriptUrl
+      || import.meta.env.VITE_SCRIPT_URL
+      || ''
+  } catch { return import.meta.env.VITE_SCRIPT_URL || '' }
 }
 
 export function setScriptUrl(url) {
