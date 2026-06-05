@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/azure-api/:path*",
+      "destination": "https://dev.azure.com/:path*"
+    }
+  ]
+}
