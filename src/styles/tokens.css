@@ -1,0 +1,69 @@
+:root {
+  /* Surfaces */
+  --bg: #F0F2F5;
+  --surface: #FFFFFF;
+  --surface2: #F6F7F9;
+
+  /* Borders */
+  --border: #E2E5EA;
+  --border2: #C8CDD6;
+
+  /* Text */
+  --text: #0F172A;
+  --text2: #475569;
+  --text3: #94A3B8;
+
+  /* Blue */
+  --blue-bg: #EFF6FF;
+  --blue-bd: #BFDBFE;
+  --blue-tx: #1D4ED8;
+  --blue: #2563EB;
+
+  /* Teal */
+  --teal-bg: #F0FDFA;
+  --teal-bd: #99F6E4;
+  --teal-tx: #0F766E;
+  --teal: #0D9488;
+
+  /* Amber */
+  --amber-bg: #FFFBEB;
+  --amber-bd: #FDE68A;
+  --amber-tx: #B45309;
+  --amber: #D97706;
+
+  /* Purple */
+  --purple-bg: #F5F3FF;
+  --purple-bd: #DDD6FE;
+  --purple-tx: #6D28D9;
+  --purple: #7C3AED;
+
+  /* Red */
+  --red-bg: #FEF2F2;
+  --red-bd: #FECACA;
+  --red-tx: #B91C1C;
+  --red: #DC2626;
+
+  /* Gray */
+  --gray-bg: #F8FAFC;
+  --gray-bd: #E2E8F0;
+  --gray-tx: #475569;
+
+  /* Green */
+  --green: #16A34A;
+  --green-bg: #F0FDF4;
+  --green-tx: #166534;
+  --green-bd: #BBF7D0;
+
+  /* Orange */
+  --orange-bg: #FFF7ED;
+  --orange-bd: #FED7AA;
+  --orange-tx: #C2410C;
+
+  /* Brand */
+  --orange: #F15A24;
+  --navy: #151B2F;
+
+  /* Radius */
+  --radius: 8px;
+  --radius-lg: 12px;
+}
