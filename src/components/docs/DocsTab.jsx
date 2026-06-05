@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 
-const PBI_CREATOR_URL = 'http://localhost:5174'
+const PBI_CREATOR_URL = 'https://criador-de-pbis.vercel.app'
 
 function getAzureConfig() {
   try {
