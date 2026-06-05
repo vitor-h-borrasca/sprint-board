@@ -38,7 +38,10 @@ export function memberAbsDatesSet(member, cfg) {
 // ── Dias efetivos ─────────────────────────────────────────────────────────────
 
 export function memberEffDays(member, cfg) {
-  return Math.max(0, (cfg.workingDays || 0) - periodGenAbsDays(cfg) - memberAbsDays(member, cfg))
+  const genSet = genAbsDatesSet(cfg)
+  const memSet = memberAbsDatesSet(member, cfg)
+  const union = new Set([...genSet, ...memSet])
+  return Math.max(0, (cfg.workingDays || 0) - union.size)
 }
 
 // ── Capacity total ────────────────────────────────────────────────────────────
