@@ -332,13 +332,24 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
   const ids = (wiqlData.workItems || []).map((w) => w.id)
   if (!ids.length) return []
 
-  // Busca com $expand=Fields para trazer todos os campos sem precisar saber nomes de referência
+  const FIELDS = [
+    'System.Id',
+    'System.Title',
+    'System.State',
+    'System.AreaPath',
+    'System.AssignedTo',
+    'System.CreatedDate',
+    'Microsoft.VSTS.Common.Priority',
+    'Custom.Prioridade',
+    'Custom.Desenvolvedor',
+  ].join(',')
+
   const chunks = []
   for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200))
   const items = []
   for (const chunk of chunks) {
     const res = await fetch(
-      `${API(org, project)}/workitems?ids=${chunk.join(',')}&$expand=Fields&api-version=7.0`,
+      `${API(org, project)}/workitems?ids=${chunk.join(',')}&fields=${FIELDS}&api-version=7.0`,
       { headers: headers(pat) }
     )
     if (!res.ok) {
