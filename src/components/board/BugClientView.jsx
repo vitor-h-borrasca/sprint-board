@@ -45,20 +45,33 @@ export default function BugClientView() {
   const azureConfig  = getAzureConfig()
   const azureReady   = !!(azureConfig.org && azureConfig.project && azureConfig.pat)
 
-  const [bugs, setBugs]       = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
-  const [search, setSearch]   = useState('')
+  const [bugs, setBugs]           = useState([])
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState('')
+  const [search, setSearch]       = useState('')
+  const [areaWarn, setAreaWarn]   = useState('')
 
   const load = useCallback(async () => {
     if (!azureReady) return
     setLoading(true)
     setError('')
+    setAreaWarn('')
     try {
       const data = await fetchBugClients(teamAreaPath, azureConfig)
       setBugs(data)
     } catch (e) {
-      setError(e.message)
+      // TF51011 = area path não existe no ADO → tenta sem filtro de área
+      if (e.message.includes('TF51011') || e.message.includes('area path')) {
+        setAreaWarn(`Area Path "${teamAreaPath}" não encontrado no Azure DevOps. Exibindo bugs sem filtro de área.`)
+        try {
+          const data = await fetchBugClients('', azureConfig)
+          setBugs(data)
+        } catch (e2) {
+          setError(e2.message)
+        }
+      } else {
+        setError(e.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -116,6 +129,18 @@ export default function BugClientView() {
           </button>
         </div>
       </div>
+
+      {/* Aviso area path */}
+      {areaWarn && (
+        <div style={{
+          fontSize: 12, padding: '8px 12px', borderRadius: 8,
+          background: 'var(--amber-bg)', border: '1px solid var(--amber-bd)', color: 'var(--amber-tx)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <i className="ti ti-alert-triangle" />
+          {areaWarn}
+        </div>
+      )}
 
       {/* Erro */}
       {error && (
