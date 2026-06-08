@@ -349,6 +349,11 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
     items.push(...(data.value || []))
   }
 
+  // Log temporário para descobrir reference names dos campos customizados
+  if (items.length > 0) {
+    console.log('[BugClient] Fields do primeiro item:', Object.keys(items[0].fields || {}).sort())
+  }
+
   return items.map((wi) => {
     const f = wi.fields || {}
 
@@ -370,8 +375,12 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
       ? new Date(clienteLiberadoRaw).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : (clienteLiberadoRaw || '')
 
-    // integracoesMarketplace — busca por qualquer key contendo "marketplace"
-    const integracoesMarketplace = findByContains('IntegracoesMarketplace', 'IntegraesMarketplace', 'Marketplace')
+    // integracoesMarketplace — tenta várias variações do nome do campo
+    const integracoesMarketplace = findByContains('IntegracoesMarketplace', 'IntegraesMarketplace', 'Marketplace', 'Integracoes', 'Integraoes')
+
+    // prioridade — pode ser campo customizado em português, não o padrão VSTS
+    const prioCustom = findByContains('Prioridade')
+    const priority = prioCustom !== '' ? prioCustom : (f['Microsoft.VSTS.Common.Priority'] ?? null)
 
     return {
       id: wi.id,
@@ -379,7 +388,7 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
       state: f['System.State'] || '',
       areaPath: f['System.AreaPath'] || '',
       assignedTo: desenvolvedor,
-      priority: f['Microsoft.VSTS.Common.Priority'] ?? null,
+      priority,
       createdDate: f['System.CreatedDate'] || null,
       clienteLiberado,
       integracoesMarketplace,
