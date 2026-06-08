@@ -360,16 +360,26 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
       return key ? (f[key] ?? '') : ''
     }
 
+    // "Desenvolvedor" é um campo customizado — tem precedência sobre System.AssignedTo
+    const desenvolvedorRaw = findField('Desenvolvedor')
+    const desenvolvedor = desenvolvedorRaw?.displayName || desenvolvedorRaw || f['System.AssignedTo']?.displayName || ''
+
+    // clienteLiberado pode ser datetime — extrai só a parte de data/hora legível
+    const clienteLiberadoRaw = findField('Anymarket_ClienteLiberado') || findField('ClienteLiberado')
+    const clienteLiberado = clienteLiberadoRaw && typeof clienteLiberadoRaw === 'string' && clienteLiberadoRaw.includes('T')
+      ? new Date(clienteLiberadoRaw).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : (clienteLiberadoRaw || '')
+
     return {
       id: wi.id,
       title: f['System.Title'] || '',
       state: f['System.State'] || '',
       areaPath: f['System.AreaPath'] || '',
-      assignedTo: f['System.AssignedTo']?.displayName || '',
+      assignedTo: desenvolvedor,
       priority: f['Microsoft.VSTS.Common.Priority'] ?? null,
       createdDate: f['System.CreatedDate'] || null,
-      clienteLiberado: findField('Anymarket_ClienteLiberado') || findField('ClienteLiberado'),
-      integracoesMarketplace: findField('IntegracoesMarketplace') || findField('IntegraesMarketplace') || findField('IntegracoesMarketplace'),
+      clienteLiberado,
+      integracoesMarketplace: findField('IntegracoesMarketplace') || findField('IntegraesMarketplace'),
       azureUrl: `https://dev.azure.com/${org}/${project}/_workitems/edit/${wi.id}`,
     }
   })
