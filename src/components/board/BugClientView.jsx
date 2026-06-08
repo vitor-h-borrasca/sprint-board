@@ -188,7 +188,6 @@ export default function BugClientView() {
                   { l: 'Desenvolvedor',         w: 180 },
                   { l: 'Prioridade',            w: 90  },
                   { l: 'Criado em',             w: 160 },
-                  { l: 'Integração',            w: 120 },
                 ].map(({ l, w }) => (
                   <th key={l} style={{
                     padding: '9px 12px', textAlign: 'left', fontWeight: 600,
@@ -260,13 +259,6 @@ export default function BugClientView() {
                     {fmtDate(bug.createdDate)}
                   </td>
 
-                  {/* Integração */}
-                  <td style={{ padding: '9px 12px' }}>
-                    {bug.integracoesMarketplace
-                      ? <span style={{ fontSize: 11, background: 'var(--purple-bg)', color: 'var(--purple-tx)', border: '1px solid var(--purple-bd)', borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{bug.integracoesMarketplace}</span>
-                      : <span style={{ color: 'var(--text3)' }}>—</span>
-                    }
-                  </td>
                 </tr>
               ))}
             </tbody>
