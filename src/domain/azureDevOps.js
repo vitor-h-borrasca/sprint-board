@@ -139,6 +139,7 @@ const AZURE_STATUS_MAP = {
   'Avaliação de Entrega':     'avalentrega',
   // Concluído
   'Monitoramento em Produção':'done',
+  'Observação':               'done',
   'Done':                     'done',
   'Closed':                   'done',
   'Resolved':                 'done',
@@ -292,6 +293,82 @@ export async function fetchDeliveryEvalItems(teamName, { org, project, pat }) {
       assignedTo: f['System.AssignedTo']?.displayName || '',
       stateChangedAt: f['Microsoft.VSTS.Common.StateChangeDate'] || null,
       parentId: f['System.Parent'] || null,
+      azureUrl: `https://dev.azure.com/${org}/${project}/_workitems/edit/${wi.id}`,
+    }
+  })
+}
+
+/**
+ * Busca via WIQL todos os Bug Clients ativos do time (State <> Done, <> Removed).
+ * Filtra pelo areaPath do board (UNDER para incluir sub-paths).
+ */
+export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
+  const areaFilter = teamAreaPath
+    ? `AND [System.AreaPath] UNDER '${teamAreaPath}'`
+    : ''
+
+  const wiql = {
+    query: `
+      SELECT [System.Id]
+      FROM WorkItems
+      WHERE [System.WorkItemType] CONTAINS 'Bug Client'
+        ${areaFilter}
+        AND [System.State] <> 'Done'
+        AND [System.State] <> 'Removed'
+        AND [System.State] <> 'Closed'
+      ORDER BY [System.CreatedDate] DESC
+    `,
+  }
+
+  const wiqlRes = await fetch(
+    `${API(org, project)}/wiql?api-version=7.0`,
+    { method: 'POST', headers: headers(pat), body: JSON.stringify(wiql) }
+  )
+  if (!wiqlRes.ok) {
+    const text = await wiqlRes.text().catch(() => '')
+    throw new Error(`WIQL erro ${wiqlRes.status}: ${text.slice(0, 200)}`)
+  }
+  const wiqlData = await wiqlRes.json()
+  const ids = (wiqlData.workItems || []).map((w) => w.id)
+  if (!ids.length) return []
+
+  const fields = [
+    'System.Id',
+    'System.Title',
+    'System.State',
+    'System.AreaPath',
+    'System.AssignedTo',
+    'System.CreatedDate',
+    'Microsoft.VSTS.Common.Priority',
+    'Anymarket.ClienteLiberado',
+    'Custom.IntegracoesMarketplace',
+  ].join(',')
+
+  const chunks = []
+  for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200))
+  const items = []
+  for (const chunk of chunks) {
+    const res = await fetch(
+      `${API(org, project)}/workitems?ids=${chunk.join(',')}&fields=${fields}&api-version=7.0`,
+      { headers: headers(pat) }
+    )
+    if (!res.ok) throw new Error(`Erro ${res.status} ao buscar Bug Clients`)
+    const data = await res.json()
+    items.push(...(data.value || []))
+  }
+
+  return items.map((wi) => {
+    const f = wi.fields || {}
+    return {
+      id: wi.id,
+      title: f['System.Title'] || '',
+      state: f['System.State'] || '',
+      areaPath: f['System.AreaPath'] || '',
+      assignedTo: f['System.AssignedTo']?.displayName || '',
+      priority: f['Microsoft.VSTS.Common.Priority'] ?? null,
+      createdDate: f['System.CreatedDate'] || null,
+      clienteLiberado: f['Anymarket.ClienteLiberado'] || '',
+      integracoesMarketplace: f['Custom.IntegracoesMarketplace'] || '',
       azureUrl: `https://dev.azure.com/${org}/${project}/_workitems/edit/${wi.id}`,
     }
   })
