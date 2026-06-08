@@ -186,7 +186,6 @@ export default function BugClientView() {
                   { l: 'Título',                w: null },
                   { l: 'Status',                w: 180 },
                   { l: 'Desenvolvedor',         w: 180 },
-                  { l: 'Cliente Liberado',      w: 130 },
                   { l: 'Prioridade',            w: 90  },
                   { l: 'Criado em',             w: 160 },
                   { l: 'Integração',            w: 120 },
@@ -246,14 +245,6 @@ export default function BugClientView() {
                   {/* Desenvolvedor */}
                   <td style={{ padding: '9px 12px', color: 'var(--text2)', whiteSpace: 'nowrap', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {bug.assignedTo || <span style={{ color: 'var(--text3)' }}>—</span>}
-                  </td>
-
-                  {/* Cliente Liberado */}
-                  <td style={{ padding: '9px 12px', textAlign: 'center' }}>
-                    {bug.clienteLiberado
-                      ? <span style={{ fontSize: 11, background: 'var(--teal-bg)', color: 'var(--teal-tx)', border: '1px solid var(--teal-bd)', borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{bug.clienteLiberado}</span>
-                      : <span style={{ color: 'var(--text3)' }}>—</span>
-                    }
                   </td>
 
                   {/* Prioridade */}
