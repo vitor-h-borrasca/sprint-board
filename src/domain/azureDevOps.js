@@ -332,7 +332,7 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
   const ids = (wiqlData.workItems || []).map((w) => w.id)
   if (!ids.length) return []
 
-  const fields = [
+  const BASE_FIELDS = [
     'System.Id',
     'System.Title',
     'System.State',
@@ -340,21 +340,39 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
     'System.AssignedTo',
     'System.CreatedDate',
     'Microsoft.VSTS.Common.Priority',
+  ]
+  const CUSTOM_FIELDS = [
     'Anymarket.ClienteLiberado',
     'Custom.IntegracoesMarketplace',
-  ].join(',')
+  ]
 
-  const chunks = []
-  for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200))
-  const items = []
-  for (const chunk of chunks) {
-    const res = await fetch(
-      `${API(org, project)}/workitems?ids=${chunk.join(',')}&fields=${fields}&api-version=7.0`,
-      { headers: headers(pat) }
-    )
-    if (!res.ok) throw new Error(`Erro ${res.status} ao buscar Bug Clients`)
-    const data = await res.json()
-    items.push(...(data.value || []))
+  async function fetchChunks(fieldList) {
+    const chunks = []
+    for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200))
+    const items = []
+    for (const chunk of chunks) {
+      const res = await fetch(
+        `${API(org, project)}/workitems?ids=${chunk.join(',')}&fields=${fieldList.join(',')}&api-version=7.0`,
+        { headers: headers(pat) }
+      )
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(`Erro ${res.status} ao buscar Bug Clients: ${text.slice(0, 200)}`)
+      }
+      const data = await res.json()
+      items.push(...(data.value || []))
+    }
+    return items
+  }
+
+  // Tenta buscar com campos customizados; se falhar (campo inválido), busca só os campos base
+  let items
+  let hasCustomFields = true
+  try {
+    items = await fetchChunks([...BASE_FIELDS, ...CUSTOM_FIELDS])
+  } catch {
+    hasCustomFields = false
+    items = await fetchChunks(BASE_FIELDS)
   }
 
   return items.map((wi) => {
@@ -367,8 +385,8 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
       assignedTo: f['System.AssignedTo']?.displayName || '',
       priority: f['Microsoft.VSTS.Common.Priority'] ?? null,
       createdDate: f['System.CreatedDate'] || null,
-      clienteLiberado: f['Anymarket.ClienteLiberado'] || '',
-      integracoesMarketplace: f['Custom.IntegracoesMarketplace'] || '',
+      clienteLiberado: hasCustomFields ? (f['Anymarket.ClienteLiberado'] || '') : '',
+      integracoesMarketplace: hasCustomFields ? (f['Custom.IntegracoesMarketplace'] || '') : '',
       azureUrl: `https://dev.azure.com/${org}/${project}/_workitems/edit/${wi.id}`,
     }
   })
