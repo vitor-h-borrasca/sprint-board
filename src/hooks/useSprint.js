@@ -1,14 +1,15 @@
-import useBoardStore from '@/store/useBoardStore'
+import useBoardStore, { filterByAreaPath } from '@/store/useBoardStore'
 import { taskHrs, totalCapacity, memberEffDays, memberUsedHrs } from '@/domain/capacity'
 
 export function useSprint() {
   const store  = useBoardStore()
   const board  = useBoardStore((s) => s.board)
+  const teamAreaPath = useBoardStore((s) => s.teamAreaPath)
 
   const members     = board.members || []
-  const backlogTasks = board.tasks || []
   const activeSlot  = board.sprints.find((s) => s.id === board.activeSprintId) || board.sprints[0]
-  const sprintTasks = activeSlot?.tasks || []
+  const backlogTasks = filterByAreaPath(board.tasks || [], teamAreaPath)
+  const sprintTasks  = filterByAreaPath(activeSlot?.tasks || [], teamAreaPath)
   const shr         = { ...activeSlot?.sprint?.sizeHrs }
   const sprint      = activeSlot?.sprint
 

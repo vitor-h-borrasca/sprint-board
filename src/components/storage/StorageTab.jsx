@@ -12,6 +12,7 @@ export default function StorageTab() {
   const syncStatus = useBoardStore((s) => s.syncStatus)
   const lastCloud  = useBoardStore((s) => s.lastCloud)
   const scriptUrl  = useBoardStore((s) => s.scriptUrl)
+  const teamName   = useBoardStore((s) => s.team)
   const { retrySync, loadFromCloud, restoreBoard } = store
 
   const [history, setHistory]           = useState(null)
@@ -271,6 +272,28 @@ export default function StorageTab() {
                 </div>
               )}
             </div>
+
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
+                Resetar board do time
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>
+                Apaga <b style={{ color: 'var(--red-tx)' }}>todos os dados locais</b> do time <b style={{ color: 'var(--text2)' }}>{teamName}</b> e inicia um board em branco. Use para corrigir dados de outro time que aparecem aqui por engano.
+              </p>
+              <button
+                className="ghost"
+                style={{ fontSize: 12, borderColor: 'var(--red-bd)', color: 'var(--red-tx)', background: 'var(--red-bg)' }}
+                onClick={() => {
+                  if (confirm(`Tem certeza? Isso vai apagar TODOS os dados locais do time "${teamName}". Esta ação não pode ser desfeita.`))
+                    store.resetTeamBoard()
+                }}
+              >
+                <i className="ti ti-trash" /> Resetar dados do time
+              </button>
+            </div>
+
           </div>
         </Card>
 

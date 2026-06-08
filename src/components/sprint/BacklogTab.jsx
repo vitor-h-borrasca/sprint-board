@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSprint } from '@/hooks/useSprint'
-import useBoardStore from '@/store/useBoardStore'
+import useBoardStore, { filterByAreaPath } from '@/store/useBoardStore'
 import FeaturesTab from '@/components/features/FeaturesTab'
 import { SIZES, TYPES, TYPE_LABELS, PRIORITIES, DEFAULT_SIZE_HRS } from '@/domain/constants'
 import { fmtHrs, genId } from '@/domain/utils'
@@ -13,6 +13,7 @@ const EMPTY_TASK = () => ({
   devHrs: '', qaHrs: '', customHrs: 0,
   devStartDate: '', devEndDate: '', qaStartDate: '', qaEndDate: '',
   sprintId: '', petSlotId: '', initiativeId: '', featureId: '',
+  areaPath: '',
 })
 
 // 'all' | 'backlog' | 'active' | 'sprints'
@@ -28,13 +29,14 @@ export default function BacklogTab() {
   const store   = useBoardStore()
   const { shr, allSprints, deleteTask, upsertTask } = useSprint()
   const switchSprint = store.switchSprint
-  const backlogTasks   = board.tasks || []
+  const teamAreaPath   = useBoardStore((s) => s.teamAreaPath)
+  const backlogTasks   = filterByAreaPath(board.tasks || [], teamAreaPath)
   const members        = board.members || []
   const pets           = board.pets || []
   const features       = board.features || []
   const activeSprintId = board.activeSprintId
   const activeSlot     = allSprints.find((s) => s.id === activeSprintId) || allSprints[0]
-  const sprintTasksAll = allSprints.flatMap((s) => s.tasks || [])
+  const sprintTasksAll = filterByAreaPath(allSprints.flatMap((s) => s.tasks || []), teamAreaPath)
 
   const allTasksFlat = [
     ...backlogTasks.map((t) => ({ ...t, _loc: 'backlog' })),
@@ -84,6 +86,7 @@ export default function BacklogTab() {
       petSlotId:   t.petSlotId   || '',
       initiativeId: t.initiativeId || '',
       featureId:   t.featureId   || '',
+      areaPath:    t.areaPath    || '',
     })
     setEditId(t.id)
     setShowForm(true)
@@ -463,6 +466,17 @@ function TaskForm({ form, setForm, members, allSprints, pets, shr, features, onS
           placeholder="Detalhes sobre a tarefa..."
           rows={3}
           style={{ width: '100%', fontSize: 12, resize: 'vertical', fontFamily: 'inherit', padding: '7px 10px', background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 'var(--radius)', color: 'var(--text)', outline: 'none' }}
+        />
+      </div>
+
+      {/* Area Path */}
+      <div style={{ marginBottom: 14 }}>
+        <LBL>Area Path <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(preenchido pelo sync com Azure DevOps)</span></LBL>
+        <input
+          value={form.areaPath}
+          onChange={(e) => f('areaPath', e.target.value)}
+          placeholder="Ex: ANYMARKET\Marketplace Global"
+          style={{ fontSize: 12, width: '100%', color: form.areaPath ? 'var(--text1)' : 'var(--text3)' }}
         />
       </div>
 

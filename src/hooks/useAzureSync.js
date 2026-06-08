@@ -44,10 +44,11 @@ export function useAzureSync() {
           unmapped.push({ title: task.title || `#${wi.id}`, code: wi.id, azureStatus })
           continue
         }
-        if (task.status !== boardStatus) {
-          store.patchTask(task.id, { status: boardStatus })
-          updated++
-        }
+        const areaPath = wi.fields?.['System.AreaPath'] || ''
+        const patch = {}
+        if (task.status !== boardStatus) { patch.status = boardStatus; updated++ }
+        if (areaPath && task.areaPath !== areaPath) patch.areaPath = areaPath
+        if (Object.keys(patch).length) store.patchTask(task.id, patch)
       }
 
       setSyncResult({

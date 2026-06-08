@@ -91,17 +91,19 @@ export function migrateData(old) {
 
 // ── Persistência local ────────────────────────────────────────────────────────
 
-export function loadBoardData() {
+function teamKey(teamName) {
+  if (!teamName) return LS_KEY
+  const slug = teamName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+  return `${LS_KEY}-${slug}`
+}
+
+export function loadBoardData(teamName) {
   try {
-    const v4 = localStorage.getItem(LS_KEY)
+    const key = teamKey(teamName)
+    const v4 = localStorage.getItem(key)
     if (v4) {
       const p = JSON.parse(v4)
       if (p.sprints) return migrateData(p)
-    }
-    const v3 = localStorage.getItem('sprint-board-v3')
-    if (v3) {
-      const p = JSON.parse(v3)
-      if (p.sprint) return migrateData(p)
     }
     return getBoardDefault()
   } catch {
@@ -109,8 +111,8 @@ export function loadBoardData() {
   }
 }
 
-export function saveBoardData(d) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(d)) } catch (e) { console.error(e) }
+export function saveBoardData(d, teamName) {
+  try { localStorage.setItem(teamKey(teamName), JSON.stringify(d)) } catch (e) { console.error(e) }
 }
 
 export function getScriptUrl() {

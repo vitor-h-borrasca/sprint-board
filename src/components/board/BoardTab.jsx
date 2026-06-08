@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSprint } from '@/hooks/useSprint'
-import useBoardStore from '@/store/useBoardStore'
+import useBoardStore, { filterByAreaPath } from '@/store/useBoardStore'
 import { useAzureSync } from '@/hooks/useAzureSync'
 import { STATUSES } from '@/domain/constants'
 import { fmtHrs } from '@/domain/utils'
@@ -13,9 +13,11 @@ const BOARD_COLUMNS = ['todo', 'inprogress', 'inqa', 'done']
 
 export default function BoardTab() {
   const board = useBoardStore((s) => s.board)
+  const teamAreaPath = useBoardStore((s) => s.teamAreaPath)
   const { shr, setTaskStatus, sprint, allSprints } = useSprint()
   const members = board.members || []
-  const sprintTasks = board.sprints.find((s) => s.id === board.activeSprintId)?.tasks || []
+  const activeSlot  = board.sprints.find((s) => s.id === board.activeSprintId)
+  const sprintTasks = filterByAreaPath(activeSlot?.tasks || [], teamAreaPath)
   const [view, setView] = useState('kanban')
   const { syncing, syncResult, azureReady, syncStatus } = useAzureSync()
 
@@ -114,7 +116,12 @@ export default function BoardTab() {
 
       {/* Gantt */}
       {view === 'gantt' && (
-        <GanttView allSprints={allSprints} members={members} activeSprint={sprint} shr={shr} />
+        <GanttView
+          allSprints={allSprints.map((s) => ({ ...s, tasks: filterByAreaPath(s.tasks || [], teamAreaPath) }))}
+          members={members}
+          activeSprint={sprint}
+          shr={shr}
+        />
       )}
 
       {/* Kanban */}

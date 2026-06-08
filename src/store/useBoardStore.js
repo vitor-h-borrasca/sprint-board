@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { loadBoardData, saveBoardData, getScriptUrl, setScriptUrl as persistScriptUrl, makeSprint, makePetSlot, getSizeHrs, getActiveSprint, getActivePet } from '@/domain/board'
+import { loadBoardData, saveBoardData, getBoardDefault, getScriptUrl, setScriptUrl as persistScriptUrl, makeSprint, makePetSlot, getSizeHrs, getActiveSprint, getActivePet } from '@/domain/board'
 import { cloudSave, cloudLoad } from '@/domain/sync'
 import { genId } from '@/domain/utils'
+import { getSessionTeam, getSessionTeamAreaPath } from '@/domain/auth'
 
 /**
  * Store central. Regra: mutations sempre chamam _persist() no final.
@@ -11,17 +12,49 @@ import { genId } from '@/domain/utils'
  * - Sem prop drilling — qualquer componente subscreve só o que precisa
  * - Mutations atômicas com immer-like spread — sem boilerplate de action/reducer
  */
+export function filterByAreaPath(tasks, teamAreaPath) {
+  if (!teamAreaPath) return tasks
+  const ap = teamAreaPath.toLowerCase()
+  return tasks.filter((t) => {
+    if (!t.areaPath) return true
+    const tp = t.areaPath.toLowerCase()
+    return tp === ap || tp.startsWith(ap + '\\')
+  })
+}
+
+export function matchesTeamAreaPath(areaPath, teamAreaPath) {
+  if (!teamAreaPath || !areaPath) return true
+  const ap = teamAreaPath.toLowerCase()
+  const tp = areaPath.toLowerCase()
+  return tp === ap || tp.startsWith(ap + '\\')
+}
+
 const useBoardStore = create((set, get) => ({
   // ── State ──────────────────────────────────────────────────────────────────
-  board: loadBoardData(),
+  team: getSessionTeam(),
+  teamAreaPath: getSessionTeamAreaPath() || '',
+  board: loadBoardData(getSessionTeam()),
   scriptUrl: getScriptUrl(),
   syncStatus: 'idle',   // idle | loading | saving | saved | nofile | error
   lastCloud: null,
   pendingSprintCreate: null, // { oldestSlot, incompleteTasks } — aguarda confirmação
 
+  // ── Init por time ──────────────────────────────────────────────────────────
+  initTeam(teamName, teamAreaPath) {
+    if (get().team === teamName && get().teamAreaPath === (teamAreaPath || '')) return
+    const board = loadBoardData(teamName)
+    set({ team: teamName, teamAreaPath: teamAreaPath || '', board, syncStatus: 'idle' })
+  },
+
+  resetTeamBoard() {
+    const board = getBoardDefault()
+    saveBoardData(board, get().team)
+    set({ board, syncStatus: 'idle' })
+  },
+
   // ── Helpers internos ───────────────────────────────────────────────────────
   _persist(board) {
-    saveBoardData(board)
+    saveBoardData(board, get().team)
     const url = get().scriptUrl
     if (!url) return
     set({ syncStatus: 'saving' })
@@ -35,13 +68,7 @@ const useBoardStore = create((set, get) => ({
   get activeSlot()    { return getActiveSprint(get().board) },
   get activePetSlot() { return getActivePet(get().board) },
   get shr()           { return getSizeHrs(get().board) },
-
-  get sprintTasks() {
-    return get().board.sprints.find((s) => s.id === get().board.activeSprintId)?.tasks || []
-  },
-  get backlogTasks() { return get().board.tasks || [] },
-  get allTasks() { return [...get().backlogTasks, ...get().sprintTasks] },
-  get members() { return get().board.members || [] },
+  get members()       { return get().board.members || [] },
 
   // ── Script URL ─────────────────────────────────────────────────────────────
   setScriptUrl(url) {
@@ -57,7 +84,7 @@ const useBoardStore = create((set, get) => ({
     try {
       const d = await cloudLoad(url)
       if (!d) { set({ syncStatus: 'nofile' }); return }
-      saveBoardData(d)
+      saveBoardData(d, get().team)
       set({ board: d, syncStatus: 'saved', lastCloud: new Date() })
     } catch {
       set({ syncStatus: 'error' })
@@ -317,9 +344,9 @@ const useBoardStore = create((set, get) => ({
   },
 
   // ── Features ───────────────────────────────────────────────────────────────
-  addFeature(name, code) {
+  addFeature(name, code, areaPath = '') {
     const { board } = get()
-    const feature = { id: genId(), code: (code || '').trim(), name: name.trim() }
+    const feature = { id: genId(), code: (code || '').trim(), name: name.trim(), areaPath: areaPath || '' }
     get()._setBoard({ ...board, features: [...(board.features || []), feature] })
     return feature.id
   },
@@ -348,7 +375,7 @@ const useBoardStore = create((set, get) => ({
 
   // ── Restore from history ───────────────────────────────────────────────────
   restoreBoard(board) {
-    saveBoardData(board)
+    saveBoardData(board, get().team)
     set({ board })
   },
 }))

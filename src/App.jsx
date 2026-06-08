@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { getSession, clearSession } from '@/domain/auth'
+import { getSession, clearSession, getSessionTeam, getSessionTeamAreaPath, saveSessionTeam } from '@/domain/auth'
 import LoginScreen from '@/components/auth/LoginScreen'
+import TeamSelectScreen from '@/components/auth/TeamSelectScreen'
 import useBoardStore from '@/store/useBoardStore'
 import { getScriptUrl } from '@/domain/board'
 import { cloudLoad } from '@/domain/sync'
@@ -20,18 +21,42 @@ import SprintTab   from '@/components/sprint/SprintTab'
 import BoardTab    from '@/components/board/BoardTab'
 
 export default function App() {
-  const [session, setSession] = useState(() => getSession())
+  const [session, setSession]         = useState(() => getSession())
+  const [team, setTeam]               = useState(() => getSessionTeam())
+  const [teamAreaPath, setTeamAreaPath] = useState(() => getSessionTeamAreaPath())
 
   if (!session) {
     return <LoginScreen onLogin={() => setSession(getSession())} />
   }
 
-  return <AppContent onLogout={() => { clearSession(); setSession(null) }} />
+  if (!team) {
+    return (
+      <TeamSelectScreen onSelect={(teamName, areaPath) => {
+        saveSessionTeam(teamName, areaPath)
+        setTeam(teamName)
+        setTeamAreaPath(areaPath)
+      }} />
+    )
+  }
+
+  return (
+    <AppContent
+      team={team}
+      teamAreaPath={teamAreaPath}
+      onLogout={() => { clearSession(); setSession(null); setTeam(null); setTeamAreaPath(null) }}
+      onSwitchTeam={() => { saveSessionTeam('', ''); setTeam(null); setTeamAreaPath(null) }}
+    />
+  )
 }
 
-function AppContent({ onLogout }) {
+function AppContent({ team, teamAreaPath, onLogout, onSwitchTeam }) {
   const store      = useBoardStore()
   const board      = useBoardStore((s) => s.board)
+
+  // Garante que o store carregue os dados do time correto ao montar
+  useEffect(() => {
+    store.initTeam(team, teamAreaPath)
+  }, [team])
   const syncStatus = useBoardStore((s) => s.syncStatus)
   const lastCloud  = useBoardStore((s) => s.lastCloud)
   const { retrySync, loadFromCloud } = store
@@ -44,12 +69,8 @@ function AppContent({ onLogout }) {
   const members       = board.members || []
   const activePetSlot = board.pets?.find((s) => s.id === board.activePetId) || board.pets?.[0]
 
-  // Init: tenta carregar do cloud na primeira montagem
-  useEffect(() => {
-    const url = getScriptUrl()
-    if (!url) return
-    store.loadFromCloud()
-  }, [])
+  // Cloud load desabilitado no auto-mount: o Drive armazena dados sem isolamento por time.
+  // Use o botão "Carregar do Drive" na aba Integrações para sincronizar manualmente.
 
   // Métricas header sprint
   const usedHrs = sprintTasks.reduce((s, t) => s + taskHrs(t, shr), 0)
@@ -122,21 +143,34 @@ function AppContent({ onLogout }) {
         )}
 
         <SyncBadge status={syncStatus} onRetry={retrySync} />
-        <button
-          onClick={onLogout}
-          title="Sair"
-          style={{ padding: '5px 10px', fontSize: 11, color: 'var(--text3)' }}
-        >
-          <i className="ti ti-logout" />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <i className="ti ti-users" />
+            {team}
+          </span>
+          <button
+            onClick={onSwitchTeam}
+            title="Trocar time"
+            style={{ padding: '5px 8px', fontSize: 11, color: 'var(--text3)' }}
+          >
+            <i className="ti ti-switch-horizontal" />
+          </button>
+          <button
+            onClick={onLogout}
+            title="Sair"
+            style={{ padding: '5px 8px', fontSize: 11, color: 'var(--text3)' }}
+          >
+            <i className="ti ti-logout" />
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
       <div className="tabs-bar">
         <TabBtn active={tab === 'board'}   onClick={() => setTab('board')}   icon="ti-layout-columns" label="Board" />
         <TabBtn active={tab === 'pet'}     onClick={() => setTab('pet')}     icon="ti-chart-bar"      label="PET"   accent="var(--purple)" />
-        <TabBtn active={tab === 'backlog'} onClick={() => setTab('backlog')} icon="ti-stack"          label={`Backlog (${(board.tasks || []).length})`} />
-        <TabBtn active={tab === 'sprint'}  onClick={() => setTab('sprint')}  icon="ti-run"            label={`Sprint (${sprintTasks.length})`} />
+        <TabBtn active={tab === 'backlog'} onClick={() => setTab('backlog')} icon="ti-stack"          label="Backlog" />
+        <TabBtn active={tab === 'sprint'}  onClick={() => setTab('sprint')}  icon="ti-run"            label="Sprint" />
         <TabBtn active={tab === 'config'}  onClick={() => setTab('config')}  icon="ti-settings"       label="Configuração" />
         <TabBtn active={tab === 'docs'}    onClick={() => setTab('docs')}    icon="ti-book-2"         label="Docs"         accent="var(--teal)" />
       </div>

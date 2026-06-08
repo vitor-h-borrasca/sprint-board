@@ -4,6 +4,7 @@ import { SIZES, AVATAR_PAL } from '@/domain/constants'
 import { calcWorkingDays, fmtHrs } from '@/domain/utils'
 import { memberEffDays, totalCapacity } from '@/domain/capacity'
 import { Card, SectionTitle, Field, Avatar, AbsenceBlock } from '@/components/shared'
+import { fetchTeams } from '@/domain/auth'
 
 export default function SetupTab() {
   const board = useBoardStore((s) => s.board)
@@ -14,9 +15,13 @@ export default function SetupTab() {
   const members    = board.members || []
 
   const [cfg, setCfg] = useState(sprint)
-  const [newMember, setNewMember] = useState({ name: '', role: 'dev', hoursPerDay: 6 })
+  const [newMember, setNewMember] = useState({ name: '', role: 'dev', hoursPerDay: 6, team: '' })
+  const [teams, setTeams] = useState([])
 
   useEffect(() => { setCfg(sprint) }, [board.activeSprintId, JSON.stringify(sprint)])
+  useEffect(() => {
+    fetchTeams().then(setTeams).catch(() => {})
+  }, [])
 
   function handleSprintField(field, value) {
     const updated = { ...cfg, [field]: value }
@@ -41,7 +46,7 @@ export default function SetupTab() {
   function addMember() {
     if (!newMember.name.trim()) return
     store.addMember({ ...newMember, hoursPerDay: Number(newMember.hoursPerDay) || 6 })
-    setNewMember({ name: '', role: 'dev', hoursPerDay: 6 })
+    setNewMember({ name: '', role: 'dev', hoursPerDay: 6, team: '' })
   }
 
   return (
@@ -70,6 +75,19 @@ export default function SetupTab() {
 
         <Field label="Nome da Sprint">
           <input value={cfg.name || ''} onChange={(e) => handleSprintField('name', e.target.value)} />
+        </Field>
+
+        <Field label="Time">
+          <select
+            value={cfg.team || ''}
+            onChange={(e) => handleSprintField('team', e.target.value)}
+            style={{ fontSize: 12 }}
+          >
+            <option value="">— Selecione um time —</option>
+            {teams.map((t) => (
+              <option key={t.name} value={t.name}>{t.name}</option>
+            ))}
+          </select>
         </Field>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
@@ -119,7 +137,7 @@ export default function SetupTab() {
         <SectionTitle icon="ti-users" label="Membros" count={members.length} />
 
         {/* Formulário novo membro */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 8, marginBottom: 16, alignItems: 'flex-end' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: 8, marginBottom: 16, alignItems: 'flex-end' }}>
           <Field label="Nome">
             <input
               value={newMember.name}
@@ -127,6 +145,14 @@ export default function SetupTab() {
               onKeyDown={(e) => e.key === 'Enter' && addMember()}
               placeholder="João Silva"
             />
+          </Field>
+          <Field label="Time">
+            <select value={newMember.team || ''} onChange={(e) => setNewMember({ ...newMember, team: e.target.value })} style={{ fontSize: 12 }}>
+              <option value="">— Time —</option>
+              {teams.map((t) => (
+                <option key={t.name} value={t.name}>{t.name}</option>
+              ))}
+            </select>
           </Field>
           <Field label="Role">
             <select value={newMember.role} onChange={(e) => setNewMember({ ...newMember, role: e.target.value })} style={{ fontSize: 12 }}>
@@ -156,7 +182,7 @@ export default function SetupTab() {
             </div>
           )}
           {members.map((m) => (
-            <MemberRow key={m.id} member={m} sprint={cfg}
+            <MemberRow key={m.id} member={m} sprint={cfg} teams={teams}
               onUpdate={(patch) => store.updateMember(m.id, patch)}
               onRemove={() => store.removeMember(m.id)} />
           ))}
@@ -207,7 +233,7 @@ function CapacityPreview({ members, cfg }) {
   )
 }
 
-function MemberRow({ member, sprint, onUpdate, onRemove }) {
+function MemberRow({ member, sprint, teams = [], onUpdate, onRemove }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -219,7 +245,10 @@ function MemberRow({ member, sprint, onUpdate, onRemove }) {
         <Avatar name={member.name} idx={member.colorIdx} size={30} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>{member.name}</div>
-          <div style={{ fontSize: 10, color: 'var(--text3)' }}>{member.role} · {member.hoursPerDay || 6}h/dia</div>
+          <div style={{ fontSize: 10, color: 'var(--text3)' }}>
+            {member.team && <span style={{ marginRight: 4 }}>{member.team} ·</span>}
+            {member.role} · {member.hoursPerDay || 6}h/dia
+          </div>
         </div>
         <i className={'ti ' + (expanded ? 'ti-chevron-up' : 'ti-chevron-down')} style={{ fontSize: 13, color: 'var(--text3)' }} />
         <button className="ghost" style={{ color: 'var(--red-tx)', padding: '2px 6px' }}
@@ -230,9 +259,17 @@ function MemberRow({ member, sprint, onUpdate, onRemove }) {
 
       {expanded && (
         <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border)', background: 'var(--surface2)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 8, marginBottom: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 8, marginBottom: 8 }}>
             <Field label="Nome">
               <input value={member.name} onChange={(e) => onUpdate({ name: e.target.value })} style={{ fontSize: 12 }} />
+            </Field>
+            <Field label="Time">
+              <select value={member.team || ''} onChange={(e) => onUpdate({ team: e.target.value })} style={{ fontSize: 12 }}>
+                <option value="">— Time —</option>
+                {teams.map((t) => (
+                  <option key={t.name} value={t.name}>{t.name}</option>
+                ))}
+              </select>
             </Field>
             <Field label="Role">
               <select value={member.role} onChange={(e) => onUpdate({ role: e.target.value })} style={{ fontSize: 12 }}>

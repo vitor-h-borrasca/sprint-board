@@ -48,8 +48,9 @@ export async function fetchWorkItemsBatch(ids, { org, project, pat }) {
   for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200))
   const results = []
   for (const chunk of chunks) {
+    const fields = 'System.Id,System.Title,System.WorkItemType,System.Description,System.State,System.AreaPath,System.AssignedTo'
     const res = await fetch(
-      `${API(org, project)}/workitems?ids=${chunk.join(',')}&api-version=7.0`,
+      `${API(org, project)}/workitems?ids=${chunk.join(',')}&fields=${fields}&api-version=7.0`,
       { headers: headers(pat) }
     )
     if (!res.ok) throw new Error(`Erro ${res.status} ao buscar PBIs`)
@@ -112,6 +113,7 @@ export function mapPbiToTask(wi, featureId) {
     featureId,
     inSprint: false,
     status: 'backlog',
+    areaPath: f['System.AreaPath'] || '',
   }
 }
 
@@ -156,7 +158,7 @@ export async function fetchWorkItemsStatus(ids, { org, project, pat }) {
   for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200))
   const results = []
   for (const chunk of chunks) {
-    const fields = 'System.Id,System.State'
+    const fields = 'System.Id,System.State,System.AreaPath'
     const res = await fetch(
       `${API(org, project)}/workitems?ids=${chunk.join(',')}&fields=${fields}&api-version=7.0`,
       { headers: headers(pat) }
@@ -299,8 +301,9 @@ export async function importFeature(featureId, azureConfig) {
   const wi = await fetchWorkItem(featureId, azureConfig)
   const fields = wi.fields || {}
   const title = fields['System.Title'] || `Feature ${featureId}`
+  const areaPath = fields['System.AreaPath'] || ''
   const { total: totalRelations, types: relationTypes } = debugRelations(wi)
   const childIds = extractChildIds(wi)
   const children = await fetchWorkItemsBatch(childIds, azureConfig)
-  return { title, azureId: String(featureId), children, totalRelations, relationTypes, childIds }
+  return { title, azureId: String(featureId), areaPath, children, totalRelations, relationTypes, childIds }
 }

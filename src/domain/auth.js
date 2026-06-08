@@ -30,6 +30,23 @@ export function saveSession(email, isAdmin = false) {
   }))
 }
 
+export function getSessionTeam() {
+  return getSession()?.team || null
+}
+
+export function getSessionTeamAreaPath() {
+  return getSession()?.teamAreaPath || null
+}
+
+export function saveSessionTeam(teamName, teamAreaPath = '') {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    if (!raw) return
+    const session = JSON.parse(raw)
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, team: teamName, teamAreaPath }))
+  } catch { /* noop */ }
+}
+
 export function isAdmin() {
   return getSession()?.isAdmin === true
 }
@@ -62,4 +79,9 @@ export async function login(email, password) {
   const data = await callAuth({ action: 'login', user: email, pass: password })
   saveSession(email, data.isAdmin === true)
   return data
+}
+
+export async function fetchTeams() {
+  const data = await callAuth({ action: 'get_teams' })
+  return data.teams || []
 }

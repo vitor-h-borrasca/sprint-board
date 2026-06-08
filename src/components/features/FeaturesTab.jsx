@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import useBoardStore from '@/store/useBoardStore'
+import useBoardStore, { matchesTeamAreaPath } from '@/store/useBoardStore'
 import { genId } from '@/domain/utils'
 import { getAzureConfig } from '@/domain/board'
 import { importFeature, fetchWorkItem, extractChildIds, fetchWorkItemsBatch, mapPbiToTask, debugRelations } from '@/domain/azureDevOps'
 
 export default function FeaturesTab() {
-  const board    = useBoardStore((s) => s.board)
-  const store    = useBoardStore()
-  const features = board.features || []
+  const board        = useBoardStore((s) => s.board)
+  const store        = useBoardStore()
+  const teamAreaPath = useBoardStore((s) => s.teamAreaPath)
+  const features     = (board.features || []).filter((f) =>
+    !f.areaPath || matchesTeamAreaPath(f.areaPath, teamAreaPath)
+  )
 
   const allTasks = [
     ...(board.tasks || []),
@@ -36,8 +39,12 @@ export default function FeaturesTab() {
     setImportErr('')
     setImporting(true)
     try {
-      const { title, azureId, children, totalRelations, relationTypes, childIds } = await importFeature(id, azureConfig)
-      const featureId = store.addFeature(title, azureId)
+      const { title, azureId, areaPath, children, totalRelations, relationTypes, childIds } = await importFeature(id, azureConfig)
+      if (teamAreaPath && areaPath && !matchesTeamAreaPath(areaPath, teamAreaPath)) {
+        setImportErr(`Esta feature pertence ao time "${areaPath}" e não é compatível com o board atual (${teamAreaPath}).`)
+        return
+      }
+      const featureId = store.addFeature(title, azureId, areaPath)
       let added = 0
       const existingCodes = new Set(allTasks.map((t) => t.code))
       for (const wi of children) {
@@ -152,6 +159,7 @@ export default function FeaturesTab() {
               onRemove={() => store.removeFeature(ft.id)}
               onAddTasks={(tasks) => tasks.forEach((t) => store.upsertTask(t))}
               onLinkTasks={(ids, featureId) => ids.forEach((id) => store.patchTask(id, { featureId }))}
+              onPatchTask={(id, patch) => store.patchTask(id, patch)}
             />
           )
         })}
@@ -160,7 +168,7 @@ export default function FeaturesTab() {
   )
 }
 
-function FeatureRow({ feature, linkedTasks, allTasks, azureConfig, azureReady, onRename, onRecode, onRemove, onAddTasks, onLinkTasks }) {
+function FeatureRow({ feature, linkedTasks, allTasks, azureConfig, azureReady, onRename, onRecode, onRemove, onAddTasks, onLinkTasks, onPatchTask }) {
   const [editName, setEditName] = useState(feature.name)
   const [editCode, setEditCode] = useState(feature.code || '')
   const [expanded, setExpanded] = useState(false)
@@ -187,11 +195,13 @@ function FeatureRow({ feature, linkedTasks, allTasks, azureConfig, azureReady, o
 
       for (const wi of children) {
         const code = String(wi.id)
+        const areaPath = wi.fields?.['System.AreaPath'] || ''
         const existing = codeToTask[code]
         if (!existing) {
           newTasks.push({ id: genId(), createdAt: Date.now(), ...mapPbiToTask(wi, feature.id) })
-        } else if (existing.featureId !== feature.id) {
-          toLink.push(existing)
+        } else {
+          if (existing.featureId !== feature.id) toLink.push(existing)
+          if (areaPath && existing.areaPath !== areaPath) onPatchTask(existing.id, { areaPath })
         }
       }
 
