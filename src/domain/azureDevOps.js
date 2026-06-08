@@ -352,23 +352,26 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
   return items.map((wi) => {
     const f = wi.fields || {}
 
-    // Busca campos customizados por sufixo — independente do prefixo (Custom., Anymarket., etc.)
-    const findField = (suffix) => {
+    // Busca campos customizados de forma flexível — por sufixo ou por substring do key
+    const findByContains = (...terms) => {
       const key = Object.keys(f).find((k) =>
-        k.toLowerCase().endsWith(suffix.toLowerCase())
+        terms.some((t) => k.toLowerCase().includes(t.toLowerCase()))
       )
       return key ? (f[key] ?? '') : ''
     }
 
     // "Desenvolvedor" é um campo customizado — tem precedência sobre System.AssignedTo
-    const desenvolvedorRaw = findField('Desenvolvedor')
+    const desenvolvedorRaw = findByContains('Desenvolvedor')
     const desenvolvedor = desenvolvedorRaw?.displayName || desenvolvedorRaw || f['System.AssignedTo']?.displayName || ''
 
-    // clienteLiberado pode ser datetime — extrai só a parte de data/hora legível
-    const clienteLiberadoRaw = findField('Anymarket_ClienteLiberado') || findField('ClienteLiberado')
+    // clienteLiberado — busca por "ClienteLiberado" ou "Anymarket_Cliente"
+    const clienteLiberadoRaw = findByContains('ClienteLiberado', 'Anymarket_Cliente')
     const clienteLiberado = clienteLiberadoRaw && typeof clienteLiberadoRaw === 'string' && clienteLiberadoRaw.includes('T')
       ? new Date(clienteLiberadoRaw).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : (clienteLiberadoRaw || '')
+
+    // integracoesMarketplace — busca por qualquer key contendo "marketplace"
+    const integracoesMarketplace = findByContains('IntegracoesMarketplace', 'IntegraesMarketplace', 'Marketplace')
 
     return {
       id: wi.id,
@@ -379,7 +382,7 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
       priority: f['Microsoft.VSTS.Common.Priority'] ?? null,
       createdDate: f['System.CreatedDate'] || null,
       clienteLiberado,
-      integracoesMarketplace: findField('IntegracoesMarketplace') || findField('IntegraesMarketplace'),
+      integracoesMarketplace,
       azureUrl: `https://dev.azure.com/${org}/${project}/_workitems/edit/${wi.id}`,
     }
   })
