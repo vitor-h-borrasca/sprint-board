@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { fetchTeams } from '@/domain/auth'
 
 const PBI_CREATOR_URL = 'https://criador-de-pbis.vercel.app'
 
@@ -18,6 +19,12 @@ function getAzureConfig() {
 export function DocsTab() {
   const [status, setStatus] = useState('checking')
   const iframeRef = useRef(null)
+  const teamsRef  = useRef([])
+
+  // Busca times uma vez para enviar ao iframe
+  useEffect(() => {
+    fetchTeams().then(list => { teamsRef.current = list }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -33,28 +40,32 @@ export function DocsTab() {
     return () => { cancelled = true }
   }, [])
 
-  // Responde pedidos de credenciais vindos do iframe
+  function sendConfig() {
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: 'AZURE_CONFIG', payload: getAzureConfig() },
+      PBI_CREATOR_URL
+    )
+    if (teamsRef.current.length) {
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'TEAMS_LIST', payload: teamsRef.current },
+        PBI_CREATOR_URL
+      )
+    }
+  }
+
+  // Responde pedidos vindos do iframe
   useEffect(() => {
     function handleMessage(event) {
       if (event.origin !== PBI_CREATOR_URL) return
-      if (event.data?.type === 'REQUEST_AZURE_CONFIG') {
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: 'AZURE_CONFIG', payload: getAzureConfig() },
-          PBI_CREATOR_URL
-        )
-      }
+      if (event.data?.type === 'REQUEST_AZURE_CONFIG') sendConfig()
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
-  // Quando o iframe carrega, envia as credenciais via postMessage
+  // Quando o iframe carrega, envia as credenciais e times
   function handleIframeLoad() {
-    const config = getAzureConfig()
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: 'AZURE_CONFIG', payload: config },
-      PBI_CREATOR_URL
-    )
+    sendConfig()
   }
 
   return (
