@@ -261,12 +261,14 @@ function SprintTaskForm({ task, members, shr, allSprints, onSave, onCancel }) {
     status: task.status || 'todo', sprintId: task.sprintId,
     devStartDate: task.devStartDate || '', devEndDate: task.devEndDate || '',
     qaStartDate: task.qaStartDate || '', qaEndDate: task.qaEndDate || '',
+    sprintExec: { dev: task.sprintExec?.dev ?? true, qa: task.sprintExec?.qa ?? true },
   } : {
     id: genId(), title: '', type: 'feature', size: 'M', priority: 2,
     description: '', assigneeId: '', qaAssigneeId: '',
     devHrs: 0, qaHrs: 0, customHrs: 0,
     status: 'todo', sprintId: allSprints.find((s) => s.id)?.id || '',
     devStartDate: '', devEndDate: '', qaStartDate: '', qaEndDate: '',
+    sprintExec: { dev: true, qa: true },
   })
 
   const f = (field, val) => setForm((p) => ({ ...p, [field]: val }))
@@ -331,6 +333,35 @@ function SprintTaskForm({ task, members, shr, allSprints, onSave, onCancel }) {
         <LabeledField label="Descrição">
           <input value={form.description} onChange={(e) => f('description', e.target.value)} placeholder="Opcional" />
         </LabeledField>
+      </div>
+
+      {/* Execução na Sprint */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
+          Execução na Sprint
+        </div>
+        <div style={{ display: 'flex', gap: 20 }}>
+          {[
+            { key: 'dev', label: 'Desenvolvimento', icon: 'ti-code' },
+            { key: 'qa',  label: 'Homologação',     icon: 'ti-test-pipe' },
+          ].map(({ key, label, icon }) => {
+            const checked = form.sprintExec[key]
+            return (
+              <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => f('sprintExec', { ...form.sprintExec, [key]: !checked })}
+                  style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--navy)' }}
+                />
+                <i className={`ti ${icon}`} style={{ fontSize: 13, color: checked ? 'var(--navy)' : 'var(--text3)' }} />
+                <span style={{ fontSize: 12, color: checked ? 'var(--text)' : 'var(--text3)', fontWeight: checked ? 500 : 400 }}>
+                  {label}
+                </span>
+              </label>
+            )
+          })}
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 8 }}>

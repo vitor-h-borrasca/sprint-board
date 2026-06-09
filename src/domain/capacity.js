@@ -54,18 +54,22 @@ export function totalCapacity(members, cfg) {
 
 export function taskHrs(task, shr) {
   if (task.ignored) return 0
-  const dh = task.devHrs != null && task.devHrs > 0 ? task.devHrs : 0
-  const qh = task.qaHrs != null && task.qaHrs > 0 ? task.qaHrs : 0
-  if (dh + qh > 0) return dh + qh
+  const devOn = task.sprintExec?.dev !== false
+  const qaOn  = task.sprintExec?.qa  !== false
+  const dh = devOn && task.devHrs != null && task.devHrs > 0 ? task.devHrs : 0
+  const qh = qaOn  && task.qaHrs  != null && task.qaHrs  > 0 ? task.qaHrs  : 0
+  if (task.devHrs > 0 || task.qaHrs > 0) return dh + qh
   if (task.customHrs != null && task.customHrs > 0) return task.customHrs
   return (shr ? shr[task.size] : DEFAULT_SIZE_HRS[task.size]) || 0
 }
 
 export function taskHrsForMember(task, shr, memberRole) {
   if (task.ignored) return 0
-  const dh = task.devHrs != null && task.devHrs > 0 ? task.devHrs : 0
-  const qh = task.qaHrs != null && task.qaHrs > 0 ? task.qaHrs : 0
-  if (dh + qh > 0) {
+  const devOn = task.sprintExec?.dev !== false
+  const qaOn  = task.sprintExec?.qa  !== false
+  const dh = devOn && task.devHrs != null && task.devHrs > 0 ? task.devHrs : 0
+  const qh = qaOn  && task.qaHrs  != null && task.qaHrs  > 0 ? task.qaHrs  : 0
+  if (task.devHrs > 0 || task.qaHrs > 0) {
     if (memberRole === 'dev') return dh
     if (memberRole === 'qa') return qh
     return dh + qh
@@ -82,9 +86,11 @@ export function memberUsedHrs(member, sprintTasks, shr) {
     .reduce((s, t) => {
       const asDev = t.assigneeId === member.id
       const asQA  = t.qaAssigneeId === member.id
-      const dh = t.devHrs != null && t.devHrs > 0 ? t.devHrs : 0
-      const qh = t.qaHrs != null && t.qaHrs > 0 ? t.qaHrs : 0
-      if (dh + qh > 0) return s + (asDev && asQA ? dh + qh : asQA ? qh : dh)
+      const devOn = t.sprintExec?.dev !== false
+      const qaOn  = t.sprintExec?.qa  !== false
+      const dh = devOn && t.devHrs != null && t.devHrs > 0 ? t.devHrs : 0
+      const qh = qaOn  && t.qaHrs  != null && t.qaHrs  > 0 ? t.qaHrs  : 0
+      if (t.devHrs > 0 || t.qaHrs > 0) return s + (asDev && asQA ? dh + qh : asQA ? qh : dh)
       return s + taskHrs(t, shr)
     }, 0)
 }

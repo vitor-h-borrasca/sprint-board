@@ -206,6 +206,28 @@ function BoardCard({ task, shr, members, onMove }) {
         </div>
       )}
 
+      {/* Tag de fase de execução (mostra quando ao menos um está desmarcado) */}
+      {(task.sprintExec?.dev === false || task.sprintExec?.qa === false) && (() => {
+        const devOn = task.sprintExec?.dev !== false
+        const qaOn  = task.sprintExec?.qa  !== false
+        if (!devOn && !qaOn) return null
+        const label = devOn ? 'Dev' : 'Hom'
+        const color = devOn ? '#3B82F6' : '#06B6D4'
+        const icon  = devOn ? 'ti-code' : 'ti-test-pipe'
+        return (
+          <div>
+            <span style={{
+              fontSize: 10, fontWeight: 600, borderRadius: 20, padding: '2px 8px',
+              background: color + '18', color, border: `1px solid ${color}44`,
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}>
+              <i className={`ti ${icon}`} style={{ fontSize: 10 }} />
+              {label}
+            </span>
+          </div>
+        )
+      })()}
+
       {/* Size + avatares */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <SizeBadge size={task.size} shr={shr} task={task} />
