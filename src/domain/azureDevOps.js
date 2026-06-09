@@ -388,6 +388,115 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
   })
 }
 
+/**
+ * Busca via WIQL todos os Bug Hom ativos do time.
+ */
+export async function fetchBugHoms(teamAreaPath, { org, project, pat }) {
+  const areaFilter = teamAreaPath
+    ? `AND [System.AreaPath] UNDER '${teamAreaPath}'`
+    : ''
+
+  const wiql = {
+    query: `
+      SELECT [System.Id]
+      FROM WorkItems
+      WHERE [System.WorkItemType] CONTAINS 'Bug Hom'
+        ${areaFilter}
+        AND [System.State] <> 'Done'
+        AND [System.State] <> 'Removed'
+        AND [System.State] <> 'Closed'
+      ORDER BY [System.CreatedDate] DESC
+    `,
+  }
+
+  return _fetchBugItems(wiql, org, project, pat)
+}
+
+/**
+ * Busca via WIQL todos os Serviços Fábrica ativos do time.
+ */
+export async function fetchServFabrica(teamAreaPath, { org, project, pat }) {
+  const areaFilter = teamAreaPath
+    ? `AND [System.AreaPath] UNDER '${teamAreaPath}'`
+    : ''
+
+  const wiql = {
+    query: `
+      SELECT [System.Id]
+      FROM WorkItems
+      WHERE [System.WorkItemType] CONTAINS 'Serviço Fábrica'
+        ${areaFilter}
+        AND [System.State] <> 'Done'
+        AND [System.State] <> 'Removed'
+        AND [System.State] <> 'Closed'
+      ORDER BY [System.CreatedDate] DESC
+    `,
+  }
+
+  return _fetchBugItems(wiql, org, project, pat)
+}
+
+/**
+ * Utilitário interno: executa WIQL + busca campos comuns a Bug Client / Bug Hom / Serviço Fábrica.
+ */
+async function _fetchBugItems(wiql, org, project, pat) {
+  const wiqlRes = await fetch(
+    `${API(org, project)}/wiql?api-version=7.0`,
+    { method: 'POST', headers: headers(pat), body: JSON.stringify(wiql) }
+  )
+  if (!wiqlRes.ok) {
+    const text = await wiqlRes.text().catch(() => '')
+    throw new Error(`WIQL erro ${wiqlRes.status}: ${text.slice(0, 200)}`)
+  }
+  const wiqlData = await wiqlRes.json()
+  const ids = (wiqlData.workItems || []).map((w) => w.id)
+  if (!ids.length) return []
+
+  const FIELDS = [
+    'System.Id',
+    'System.Title',
+    'System.State',
+    'System.AreaPath',
+    'System.AssignedTo',
+    'System.CreatedDate',
+    'Microsoft.VSTS.Common.Priority',
+    'Custom.Prioridade',
+    'Custom.Desenvolvedor',
+  ].join(',')
+
+  const chunks = []
+  for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200))
+  const items = []
+  for (const chunk of chunks) {
+    const res = await fetch(
+      `${API(org, project)}/workitems?ids=${chunk.join(',')}&fields=${FIELDS}&api-version=7.0`,
+      { headers: headers(pat) }
+    )
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`Erro ${res.status}: ${text.slice(0, 200)}`)
+    }
+    const data = await res.json()
+    items.push(...(data.value || []))
+  }
+
+  return items.map((wi) => {
+    const f = wi.fields || {}
+    const desenvolvedorRaw = f['Custom.Desenvolvedor']
+    const desenvolvedor = desenvolvedorRaw?.displayName || desenvolvedorRaw || f['System.AssignedTo']?.displayName || ''
+    return {
+      id: wi.id,
+      title: f['System.Title'] || '',
+      state: f['System.State'] || '',
+      areaPath: f['System.AreaPath'] || '',
+      assignedTo: desenvolvedor,
+      priority: f['Custom.Prioridade'] ?? f['Microsoft.VSTS.Common.Priority'] ?? null,
+      createdDate: f['System.CreatedDate'] || null,
+      azureUrl: `https://dev.azure.com/${org}/${project}/_workitems/edit/${wi.id}`,
+    }
+  })
+}
+
 export async function importFeature(featureId, azureConfig) {
   const wi = await fetchWorkItem(featureId, azureConfig)
   const fields = wi.fields || {}

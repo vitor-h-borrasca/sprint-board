@@ -37,7 +37,7 @@ export default function BoardTab() {
           {[
             { v: 'kanban',      icon: 'ti-layout-columns', label: 'Kanban' },
             { v: 'gantt',       icon: 'ti-chart-gantt',    label: 'Gantt'  },
-            { v: 'bugclient',   icon: 'ti-bug',            label: 'Bug Client', accent: 'var(--red-tx)' },
+            { v: 'bugclient',   icon: 'ti-bug',            label: 'Bugs & Fábrica', accent: 'var(--red-tx)' },
             { v: 'avalentrega', icon: 'ti-clock-check',    label: 'Avaliação de Entrega', accent: 'var(--orange-tx)' },
           ].map(({ v, icon, label, accent }) => {
             const active = view === v
