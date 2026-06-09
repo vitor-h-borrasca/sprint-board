@@ -17,7 +17,11 @@ export function InitiativeCard({ initiative: init, shr, linkedSprints = [], onEd
   const isPrioritized = init.prioritized !== false
   const hrs = shr[init.size] || 0
 
-  const linkedTasks = linkedSprints.flatMap((s) => s.tasks)
+  const allLinkedTasks   = linkedSprints.flatMap((s) => s.tasks)
+  const hasTaskFilter    = init.linkedTaskIds?.length > 0
+  const linkedTasks      = hasTaskFilter
+    ? allLinkedTasks.filter((t) => init.linkedTaskIds.includes(t.id))
+    : allLinkedTasks
   const linkedDone  = linkedTasks.filter((t) => t.status === 'done').length
   const linkedPct   = linkedTasks.length > 0 ? Math.round(linkedDone / linkedTasks.length * 100) : null
 
@@ -68,7 +72,7 @@ export function InitiativeCard({ initiative: init, shr, linkedSprints = [], onEd
           {linkedPct !== null && (
             <div style={{ marginTop: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text3)', marginBottom: 3 }}>
-                <span>Progresso real ({linkedDone}/{linkedTasks.length} tarefas)</span>
+                <span>Progresso real ({linkedDone}/{linkedTasks.length} tarefas{hasTaskFilter && allLinkedTasks.length > linkedTasks.length ? ` de ${allLinkedTasks.length} na sprint` : ''})</span>
                 <span style={{ fontWeight: 700, color: linkedPct === 100 ? 'var(--teal-tx)' : 'var(--blue-tx)' }}>{linkedPct}%</span>
               </div>
               <div style={{ height: 5, background: 'var(--surface2)', borderRadius: 3, overflow: 'hidden', border: '1px solid var(--border)' }}>

@@ -36,6 +36,7 @@ export function usePET() {
       status: initiative.status,
       description: initiative.description || '',
       linkedSprintIds: initiative.linkedSprintIds || [],
+      linkedTaskIds: initiative.linkedTaskIds || [],
       isInitiative: initiative.isInitiative !== false,
       prioritized: initiative.prioritized !== false,
     })

@@ -1,4 +1,4 @@
-import { SIZES, QUARTERS, PET_STATUSES } from '@/domain/constants'
+import { SIZES, QUARTERS, PET_STATUSES, TYPE_LABELS } from '@/domain/constants'
 import { countInitiativesInQuarter, validateInitiativeLimit } from '@/domain/initiatives'
 import { Field } from '@/components/shared'
 
@@ -23,6 +23,17 @@ export function InitiativeForm({ form, setForm, onSubmit, onCancel, editId, init
     const ids = form.linkedSprintIds || []
     setForm({ ...form, linkedSprintIds: checked ? [...ids, sprintId] : ids.filter((x) => x !== sprintId) })
   }
+
+  function toggleTask(taskId, checked) {
+    const ids = form.linkedTaskIds || []
+    setForm({ ...form, linkedTaskIds: checked ? [...ids, taskId] : ids.filter((x) => x !== taskId) })
+  }
+
+  // Tarefas das sprints vinculadas, agrupadas por sprint
+  const linkedSprintObjs = allSprints.filter((s) => (form.linkedSprintIds || []).includes(s.id))
+  const availableTasks   = linkedSprintObjs.flatMap((s) =>
+    s.tasks.map((t) => ({ ...t, sprintName: s.sprint.name }))
+  )
 
   const initiativeCountInQ = countInitiativesInQuarter(initiatives, form.quarter, editId)
   const atLimit = initiativeCountInQ >= 2
@@ -161,6 +172,50 @@ export function InitiativeForm({ form, setForm, onSubmit, onCancel, editId, init
               )
             })}
           </div>
+        </Field>
+      )}
+
+      {/* Tarefas vinculadas (filtro de progresso) */}
+      {availableTasks.length > 0 && (
+        <Field label="Tarefas desta iniciativa" hint="(somente estas contarão no progresso)">
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 4,
+            maxHeight: 180, overflowY: 'auto',
+            border: '1px solid var(--border2)', borderRadius: 'var(--radius)',
+            padding: '6px 8px', background: 'var(--surface)',
+          }}>
+            {availableTasks.map((t) => {
+              const linked = (form.linkedTaskIds || []).includes(t.id)
+              return (
+                <label key={t.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, fontSize: 12,
+                  cursor: 'pointer', color: linked ? 'var(--blue-tx)' : 'var(--text2)',
+                  padding: '3px 4px', borderRadius: 4,
+                  background: linked ? 'var(--blue-bg)' : 'transparent',
+                  transition: 'background .1s',
+                }}>
+                  <input
+                    type="checkbox"
+                    style={{ width: 'auto', cursor: 'pointer', flexShrink: 0 }}
+                    checked={linked}
+                    onChange={(e) => toggleTask(t.id, e.target.checked)}
+                  />
+                  {t.code && (
+                    <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--text3)', flexShrink: 0 }}>{t.code}</span>
+                  )}
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.title}>
+                    {t.title || <span style={{ color: 'var(--text3)', fontStyle: 'italic' }}>sem título</span>}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--text3)', flexShrink: 0 }}>{t.sprintName}</span>
+                </label>
+              )
+            })}
+          </div>
+          {(form.linkedTaskIds || []).length > 0 && (
+            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>
+              {(form.linkedTaskIds || []).length} tarefa{(form.linkedTaskIds || []).length > 1 ? 's' : ''} selecionada{(form.linkedTaskIds || []).length > 1 ? 's' : ''} de {availableTasks.length}
+            </div>
+          )}
         </Field>
       )}
 

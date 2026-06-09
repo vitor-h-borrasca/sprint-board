@@ -34,6 +34,7 @@ export function newInitiativeDefaults(quarter = 'Q1') {
     status: 'notstarted',
     description: '',
     linkedSprintIds: [],
+    linkedTaskIds: [],
     isInitiative: true,
     prioritized: true,
   }
