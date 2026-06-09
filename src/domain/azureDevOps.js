@@ -135,8 +135,8 @@ const AZURE_STATUS_MAP = {
   'Em Homologação':           'inqa',
   'Retirar WIP':              'inqa',
   'Em Merge Request':         'inqa',
-  // Avaliação de Entrega — fluxo PO (prazo 60 dias)
-  'Avaliação de Entrega':     'avalentrega',
+  // Avaliação de Entrega → tratado como Concluído
+  'Avaliação de Entrega':     'done',
   // Concluído
   'Monitoramento em Produção':'done',
   'Observação':               'done',
