@@ -21,9 +21,16 @@ export function DocsTab() {
   const iframeRef = useRef(null)
   const teamsRef  = useRef([])
 
-  // Busca times uma vez para enviar ao iframe
+  // Busca times e envia ao iframe assim que resolver (independente do load order)
   useEffect(() => {
-    fetchTeams().then(list => { teamsRef.current = list }).catch(() => {})
+    fetchTeams().then(list => {
+      if (!list.length) return
+      teamsRef.current = list
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'TEAMS_LIST', payload: list },
+        PBI_CREATOR_URL
+      )
+    }).catch(() => {})
   }, [])
 
   useEffect(() => {
