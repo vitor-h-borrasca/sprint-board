@@ -137,6 +137,8 @@ const AZURE_STATUS_MAP = {
   'Em Merge Request':         'inqa',
   // Avaliação de Entrega → tratado como Concluído
   'Avaliação de Entrega':     'done',
+  'Avaliação da entrega':     'done',
+  'Avaliação da Entrega':     'done',
   // Concluído
   'Monitoramento em Produção':'done',
   'Observação':               'done',
