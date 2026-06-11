@@ -12,62 +12,30 @@ export function DocsTab() {
   const [tab, setTab] = useState('pbi')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 'calc(100vh - 110px)' }}>
-      <div style={{
-        margin: 16, flex: 1, display: 'flex', flexDirection: 'column',
-        background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-lg)', overflow: 'hidden',
-      }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'stretch',
-          borderBottom: '1px solid var(--border)',
-          padding: '0 16px', flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', alignSelf: 'center', marginRight: 16, whiteSpace: 'nowrap' }}>
-            🗂️ Criador de tarefas
-          </span>
-
-          {TABS.map(({ k, icon, label }) => (
-            <button
-              key={k}
-              onClick={() => setTab(k)}
-              style={{
-                border: 'none',
-                borderBottom: '2px solid ' + (tab === k ? 'var(--orange)' : 'transparent'),
-                borderRadius: 0, background: 'none',
-                padding: '11px 14px', fontSize: 13, gap: 6,
-                display: 'inline-flex', alignItems: 'center',
-                color: tab === k ? 'var(--navy)' : 'var(--text3)',
-                fontWeight: tab === k ? 600 : 400,
-                cursor: 'pointer', whiteSpace: 'nowrap',
-              }}
-            >
+      {/* Toolbar */}
+      <div className="toolbar">
+        {TABS.map(({ k, icon, label }) => {
+          const active = tab === k
+          return (
+            <button key={k} onClick={() => setTab(k)} style={{
+              background: active ? 'var(--navy)' : 'var(--surface)',
+              color: active ? '#fff' : 'var(--text2)',
+              borderColor: active ? 'var(--navy)' : 'var(--border2)',
+            }}>
               <i className={'ti ' + icon} style={{ fontSize: 14 }} />
               {label}
             </button>
-          ))}
-        </div>
-
-        {/* Conteúdo */}
-        {tab === 'pbi' && (
-          <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
-            <PbiCreator defaultType="pbi" />
-          </div>
-        )}
-        {tab === 'feature' && (
-          <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
-            <PbiCreator defaultType="feature" />
-          </div>
-        )}
-        {tab === 'entrega_tecnica' && (
-          <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
-            <EntregaTecnicaCreator />
-          </div>
-        )}
-
+          )
+        })}
       </div>
+
+      {/* Conteúdo */}
+      {tab === 'pbi'             && <PbiCreator defaultType="pbi" />}
+      {tab === 'feature'         && <PbiCreator defaultType="feature" />}
+      {tab === 'entrega_tecnica' && <EntregaTecnicaCreator />}
+
     </div>
   )
 }
