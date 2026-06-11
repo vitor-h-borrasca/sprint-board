@@ -276,9 +276,11 @@ export default function EntregaTecnicaCreator() {
       const skipMsg = skipped.length ? ` Campos ignorados (não existem neste projeto): ${skipped.join(', ')}.` : ''
       setResult({ ok: true, message: `Work item #${wi.id} ${mode === 'criar' ? 'criado' : 'atualizado'} com sucesso!${skipMsg}`, url })
     } catch (err) {
+      console.error('[EntregaTecnica] erro ao criar/atualizar:', err)
       setResult({ ok: false, message: err.message || 'Erro desconhecido.' })
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
