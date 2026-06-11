@@ -169,7 +169,7 @@ export default function EntregaTecnicaCreator() {
   }
 
   return (
-    <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 760 }}>
+    <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
       {/* Card principal */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 20px 16px' }}>
