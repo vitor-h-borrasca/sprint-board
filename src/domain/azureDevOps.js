@@ -505,27 +505,22 @@ async function _fetchBugItems(wiql, org, project, pat) {
 // ── Criação / atualização de work items ───────────────────────────────────────
 
 export async function fetchProjectMembers({ org, project, pat }, teamName = null) {
-  // Se tem time específico, busca direto; senão busca todos os times do projeto
-  let teamIds = []
+  const teamsRes = await fetch(
+    `${API_ORG(org)}/projects/${encodeURIComponent(project)}/teams?api-version=7.0`,
+    { headers: headers(pat) }
+  )
+  if (!teamsRes.ok) return []
+  const { value: allTeams } = await teamsRes.json()
+
+  // Filtra pelo time do board; se não achar, usa todos (até 5)
+  let teamIds
   if (teamName) {
-    const r = await fetch(
-      `${API_ORG(org)}/projects/${encodeURIComponent(project)}/teams?api-version=7.0`,
-      { headers: headers(pat) }
-    )
-    if (!r.ok) return []
-    const { value: teams } = await r.json()
-    const match = (teams || []).find(t => t.name === teamName)
-    if (match) teamIds = [match.id]
+    const match = (allTeams || []).find(t => t.name === teamName)
+    teamIds = match ? [match.id] : (allTeams || []).slice(0, 5).map(t => t.id)
+  } else {
+    teamIds = (allTeams || []).slice(0, 5).map(t => t.id)
   }
-  if (!teamIds.length) {
-    const r = await fetch(
-      `${API_ORG(org)}/projects/${encodeURIComponent(project)}/teams?api-version=7.0`,
-      { headers: headers(pat) }
-    )
-    if (!r.ok) return []
-    const { value: teams } = await r.json()
-    teamIds = (teams || []).slice(0, 5).map(t => t.id)
-  }
+
   const seen = new Set()
   const members = []
   await Promise.all(teamIds.map(async id => {
@@ -536,7 +531,9 @@ export async function fetchProjectMembers({ org, project, pat }, teamName = null
     if (!r.ok) return
     const { value } = await r.json()
     for (const { identity } of (value || [])) {
-      if (!identity?.uniqueName || seen.has(identity.uniqueName)) continue
+      // Ignora grupos (uniqueName começa com '[') e entradas sem email
+      if (!identity?.uniqueName || identity.uniqueName.startsWith('[')) continue
+      if (seen.has(identity.uniqueName)) continue
       seen.add(identity.uniqueName)
       members.push({ displayName: identity.displayName, uniqueName: identity.uniqueName })
     }
