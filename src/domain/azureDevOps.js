@@ -531,8 +531,8 @@ export async function fetchProjectMembers({ org, project, pat }, teamName = null
     if (!r.ok) return
     const { value } = await r.json()
     for (const { identity } of (value || [])) {
-      // Ignora grupos (uniqueName começa com '[') e entradas sem email
-      if (!identity?.uniqueName || identity.uniqueName.startsWith('[')) continue
+      // Ignora grupos — somente pessoas têm email no uniqueName
+      if (!identity?.uniqueName || !identity.uniqueName.includes('@')) continue
       if (seen.has(identity.uniqueName)) continue
       seen.add(identity.uniqueName)
       members.push({ displayName: identity.displayName, uniqueName: identity.uniqueName })
