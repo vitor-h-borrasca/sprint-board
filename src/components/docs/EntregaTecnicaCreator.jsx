@@ -3,7 +3,7 @@ import { marked } from 'marked'
 import { createEntregaTecnica, updateWorkItemFields } from '@/domain/azureDevOps'
 
 const TIPOS  = ['Melhoria Técnica', 'Bug', 'Refatoração']
-const STATES = ['Em Análise', 'Em Desenvolvimento', 'Para Code Review', 'Em Code Review', 'Para Homologação', 'Em Homologação', 'Done']
+const STATES = ['New', 'Em Análise', 'Em Design', 'Em Desenvolvimento', 'Para Code Review', 'Para Homologação', 'Em Homologação', 'Done']
 
 const TEMPLATE_MD = `# [MARKETPLACE] [MÓDULO] — descrição objetiva da entrega
 
@@ -247,6 +247,7 @@ export default function EntregaTecnicaCreator() {
     try {
       let fields = [
         { path: '/fields/System.Title', value: review.title || files[0]?.name.replace('.md', '') },
+        { path: '/fields/System.State', value: state },
         ...FIELD_MAP.map(({ section, path, html }) => {
           let raw = review.sections[section] || ''
           // Combina STE dentro do campo Solução Proposta
