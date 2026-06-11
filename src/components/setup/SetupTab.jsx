@@ -15,7 +15,7 @@ export default function SetupTab() {
   const members    = board.members || []
 
   const [cfg, setCfg] = useState(sprint)
-  const [newMember, setNewMember] = useState({ name: '', role: 'dev', hoursPerDay: 6, team: '' })
+  const [newMember, setNewMember] = useState({ name: '', email: '', role: 'dev', hoursPerDay: 6, team: '' })
   const [teams, setTeams] = useState([])
 
   useEffect(() => { setCfg(sprint) }, [board.activeSprintId, JSON.stringify(sprint)])
@@ -46,7 +46,7 @@ export default function SetupTab() {
   function addMember() {
     if (!newMember.name.trim()) return
     store.addMember({ ...newMember, hoursPerDay: Number(newMember.hoursPerDay) || 6 })
-    setNewMember({ name: '', role: 'dev', hoursPerDay: 6, team: '' })
+    setNewMember({ name: '', email: '', role: 'dev', hoursPerDay: 6, team: '' })
   }
 
   return (
@@ -137,13 +137,22 @@ export default function SetupTab() {
         <SectionTitle icon="ti-users" label="Membros" count={members.length} />
 
         {/* Formulário novo membro */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: 8, marginBottom: 16, alignItems: 'flex-end' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto auto auto', gap: 8, marginBottom: 16, alignItems: 'flex-end' }}>
           <Field label="Nome">
             <input
               value={newMember.name}
               onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
               onKeyDown={(e) => e.key === 'Enter' && addMember()}
               placeholder="João Silva"
+            />
+          </Field>
+          <Field label="E-mail">
+            <input
+              value={newMember.email || ''}
+              onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+              onKeyDown={(e) => e.key === 'Enter' && addMember()}
+              placeholder="joao@empresa.com"
+              style={{ fontSize: 12 }}
             />
           </Field>
           <Field label="Time">
@@ -248,6 +257,7 @@ function MemberRow({ member, sprint, teams = [], onUpdate, onRemove }) {
           <div style={{ fontSize: 10, color: 'var(--text3)' }}>
             {member.team && <span style={{ marginRight: 4 }}>{member.team} ·</span>}
             {member.role} · {member.hoursPerDay || 6}h/dia
+            {member.email && <span style={{ marginLeft: 4 }}>· {member.email}</span>}
           </div>
         </div>
         <i className={'ti ' + (expanded ? 'ti-chevron-up' : 'ti-chevron-down')} style={{ fontSize: 13, color: 'var(--text3)' }} />
@@ -259,9 +269,12 @@ function MemberRow({ member, sprint, teams = [], onUpdate, onRemove }) {
 
       {expanded && (
         <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border)', background: 'var(--surface2)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 8, marginBottom: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto auto', gap: 8, marginBottom: 8 }}>
             <Field label="Nome">
               <input value={member.name} onChange={(e) => onUpdate({ name: e.target.value })} style={{ fontSize: 12 }} />
+            </Field>
+            <Field label="E-mail">
+              <input value={member.email || ''} onChange={(e) => onUpdate({ email: e.target.value })} placeholder="joao@empresa.com" style={{ fontSize: 12 }} />
             </Field>
             <Field label="Time">
               <select value={member.team || ''} onChange={(e) => onUpdate({ team: e.target.value })} style={{ fontSize: 12 }}>
