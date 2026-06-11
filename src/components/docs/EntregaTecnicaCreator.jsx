@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { marked } from 'marked'
 import { createEntregaTecnica, updateWorkItemFields } from '@/domain/azureDevOps'
 
 const TIPOS  = ['Melhoria Técnica', 'Bug', 'Refatoração']
@@ -132,9 +133,18 @@ function parseMarkdown(raw) {
 
 function mdToHtml(text) {
   if (!text) return ''
-  return '<div>' + text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .split('\n').map(l => l.trim() ? `<p>${l}</p>` : '').join('') + '</div>'
+  // Remove separadores --- que ficam sobrando entre seções do template
+  const clean = text.replace(/^---+\s*$/gm, '').trim()
+  return marked.parse(clean)
+}
+
+function mdToPlain(text) {
+  if (!text) return ''
+  // Remove separadores, headers markdown e retorna texto limpo
+  return text
+    .replace(/^---+\s*$/gm, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .trim()
 }
 
 function getAzureConfig() {
@@ -239,7 +249,7 @@ export default function EntregaTecnicaCreator() {
           path,
           value: html
             ? mdToHtml(review.sections[section] || '')
-            : (review.sections[section] || ''),
+            : mdToPlain(review.sections[section] || ''),
         })),
       ]
 
