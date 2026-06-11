@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { marked } from 'marked'
-import { createEntregaTecnica, updateWorkItemFields } from '@/domain/azureDevOps'
+import { createEntregaTecnica, updateWorkItemFields, fetchProjectMembers } from '@/domain/azureDevOps'
 
 const TIPOS  = ['Melhoria Técnica', 'Bug', 'Refatoração']
 const STATES = ['New', 'Em Análise', 'Em Design', 'Em Desenvolvimento', 'Para Code Review', 'Para Homologação', 'Em Homologação', 'Done']
@@ -190,15 +190,28 @@ function FieldReview({ label, value }) {
 }
 
 export default function EntregaTecnicaCreator() {
-  const [mode, setMode]           = useState('criar')
-  const [tipo, setTipo]           = useState('Melhoria Técnica')
-  const [state, setState]         = useState('Em Análise')
-  const [parentId, setParentId]   = useState('')
+  const [mode, setMode]             = useState('criar')
+  const [tipo, setTipo]             = useState('Melhoria Técnica')
+  const [state, setState]           = useState('Em Análise')
+  const [assignedTo, setAssignedTo] = useState('')
+  const [members, setMembers]       = useState([])
+  const [parentId, setParentId]     = useState('')
   const [workItemId, setWorkItemId] = useState('')
-  const [files, setFiles]         = useState([])
-  const [review, setReview]       = useState(null)   // { title, sections } — etapa 2
-  const [result, setResult]       = useState(null)   // { ok, message, url } — etapa 3
-  const [loading, setLoading]     = useState(false)
+  const [files, setFiles]           = useState([])
+  const [review, setReview]         = useState(null)
+  const [result, setResult]         = useState(null)
+  const [loading, setLoading]       = useState(false)
+
+  useEffect(() => {
+    const cfg = getAzureConfig()
+    if (!cfg.org || !cfg.pat) return
+    fetchProjectMembers(cfg).then(list => {
+      setMembers(list)
+      // pré-seleciona o próprio usuário se encontrado pelo email
+      const me = list.find(m => m.uniqueName === cfg.pat?.split('@')?.[0] + '@' || list[0])
+      if (list.length && !assignedTo) setAssignedTo(list[0].uniqueName)
+    }).catch(() => {})
+  }, [])
 
   function downloadTemplate() {
     const blob = new Blob([TEMPLATE_MD], { type: 'text/markdown;charset=utf-8' })
@@ -248,6 +261,7 @@ export default function EntregaTecnicaCreator() {
       let fields = [
         { path: '/fields/System.Title', value: review.title || files[0]?.name.replace('.md', '') },
         { path: '/fields/System.State', value: state },
+        ...(assignedTo ? [{ path: '/fields/System.AssignedTo', value: assignedTo }] : []),
         ...FIELD_MAP.map(({ section, path, html }) => {
           let raw = review.sections[section] || ''
           // Combina STE dentro do campo Solução Proposta
@@ -351,6 +365,26 @@ export default function EntregaTecnicaCreator() {
               {STATES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
+        </div>
+
+        {/* Responsável */}
+        <div style={{ marginBottom: 14 }}>
+          <LBL>Responsável <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(Assigned To)</span></LBL>
+          {members.length > 0 ? (
+            <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)} style={{ fontSize: 12, maxWidth: 340 }}>
+              <option value="">— sem atribuição —</option>
+              {members.map(m => (
+                <option key={m.uniqueName} value={m.uniqueName}>{m.displayName}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={assignedTo}
+              onChange={e => setAssignedTo(e.target.value)}
+              placeholder="email@empresa.com"
+              style={{ maxWidth: 340, fontSize: 12 }}
+            />
+          )}
         </div>
 
         {/* Template */}

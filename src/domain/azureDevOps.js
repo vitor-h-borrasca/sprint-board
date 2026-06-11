@@ -1,5 +1,6 @@
 // Usa proxy local do Vite para evitar bloqueio de CORS do browser
-const API = (org, project) => `/azure-api/${org}/${project}/_apis/wit`
+const API     = (org, project) => `/azure-api/${org}/${project}/_apis/wit`
+const API_ORG = (org)          => `/azure-api/${org}/_apis`
 
 function headers(pat) {
   return {
@@ -502,6 +503,31 @@ async function _fetchBugItems(wiql, org, project, pat) {
 }
 
 // ── Criação / atualização de work items ───────────────────────────────────────
+
+export async function fetchProjectMembers({ org, project, pat }) {
+  const res = await fetch(
+    `${API_ORG(org)}/projects/${encodeURIComponent(project)}/teams?api-version=7.0`,
+    { headers: headers(pat) }
+  )
+  if (!res.ok) return []
+  const { value: teams } = await res.json()
+  const seen = new Set()
+  const members = []
+  await Promise.all((teams || []).slice(0, 5).map(async team => {
+    const r = await fetch(
+      `${API_ORG(org)}/projects/${encodeURIComponent(project)}/teams/${team.id}/members?api-version=7.0`,
+      { headers: headers(pat) }
+    )
+    if (!r.ok) return
+    const { value } = await r.json()
+    for (const { identity } of (value || [])) {
+      if (!identity?.uniqueName || seen.has(identity.uniqueName)) continue
+      seen.add(identity.uniqueName)
+      members.push({ displayName: identity.displayName, uniqueName: identity.uniqueName })
+    }
+  }))
+  return members.sort((a, b) => a.displayName.localeCompare(b.displayName))
+}
 
 export async function createEntregaTecnica(fields, parentId, { org, project, pat }) {
   const ops = fields.map(({ path, value }) => ({ op: 'add', path, value }))
