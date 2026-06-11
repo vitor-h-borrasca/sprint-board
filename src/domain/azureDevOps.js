@@ -344,6 +344,8 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
     'Microsoft.VSTS.Common.Priority',
     'Custom.Prioridade',
     'Custom.Desenvolvedor',
+    'Custom.any_clienteA',
+    'Custom.Projeto_integracao',
   ].join(',')
 
   const chunks = []
