@@ -526,7 +526,7 @@ export async function createEntregaTecnica(fields, parentId, { org, project, pat
   )
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`Erro ${res.status} ao criar work item: ${text.slice(0, 300)}`)
+    throw new Error(`Erro ${res.status} ao criar work item: ${text.slice(0, 800)}`)
   }
   return res.json()
 }

@@ -235,8 +235,6 @@ export default function EntregaTecnicaCreator() {
     try {
       let fields = [
         { path: '/fields/System.Title', value: review.title || files[0]?.name.replace('.md', '') },
-        { path: '/fields/Custom.ANY_Tipo_entrega_tecnica', value: tipo },
-        { path: '/fields/System.State', value: state },
         ...FIELD_MAP.map(({ section, path, html }) => ({
           path,
           value: html
