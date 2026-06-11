@@ -289,7 +289,7 @@ export async function fetchDeliveryEvalItems(teamName, { org, project, pat }) {
     return {
       id: wi.id,
       title: f['System.Title'] || '',
-      type: wiType === 'Feature' ? 'feature' : 'pbi',
+      type: wiType === 'Feature' ? 'feature' : wiType === 'Entrega Tecnica' ? 'entrega_tecnica' : 'pbi',
       workItemType: wiType,
       areaPath: f['System.AreaPath'] || '',
       assignedTo: f['System.AssignedTo']?.displayName || '',
@@ -499,6 +499,53 @@ async function _fetchBugItems(wiql, org, project, pat) {
       azureUrl: `https://dev.azure.com/${org}/${project}/_workitems/edit/${wi.id}`,
     }
   })
+}
+
+// ── Criação / atualização de work items ───────────────────────────────────────
+
+export async function createEntregaTecnica(fields, parentId, { org, project, pat }) {
+  const ops = fields.map(({ path, value }) => ({ op: 'add', path, value }))
+  if (parentId) {
+    ops.push({
+      op: 'add',
+      path: '/relations/-',
+      value: {
+        rel: 'System.LinkTypes.Hierarchy-Reverse',
+        url: `https://dev.azure.com/${org}/${project}/_apis/wit/workItems/${parentId}`,
+      },
+    })
+  }
+  const type = encodeURIComponent('Entrega Tecnica')
+  const res = await fetch(
+    `${API(org, project)}/workitems/$${type}?api-version=7.0`,
+    {
+      method: 'POST',
+      headers: { ...headers(pat), 'Content-Type': 'application/json-patch+json' },
+      body: JSON.stringify(ops),
+    }
+  )
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Erro ${res.status} ao criar work item: ${text.slice(0, 300)}`)
+  }
+  return res.json()
+}
+
+export async function updateWorkItemFields(id, fields, { org, project, pat }) {
+  const ops = fields.map(({ path, value }) => ({ op: 'add', path, value }))
+  const res = await fetch(
+    `${API(org, project)}/workitems/${id}?api-version=7.0`,
+    {
+      method: 'PATCH',
+      headers: { ...headers(pat), 'Content-Type': 'application/json-patch+json' },
+      body: JSON.stringify(ops),
+    }
+  )
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Erro ${res.status} ao atualizar work item: ${text.slice(0, 300)}`)
+  }
+  return res.json()
 }
 
 export async function importFeature(featureId, azureConfig) {

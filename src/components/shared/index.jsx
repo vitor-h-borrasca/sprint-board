@@ -31,8 +31,9 @@ export function TypeBadge({ type }) {
   const map = {
     feature:   { bg: 'var(--blue-bg)',   bd: 'var(--blue-bd)',   tx: 'var(--blue-tx)' },
     pbi:       { bg: 'var(--purple-bg)', bd: 'var(--purple-bd)', tx: 'var(--purple-tx)' },
-    tecnica:   { bg: 'var(--teal-bg)',   bd: 'var(--teal-bd)',   tx: 'var(--teal-tx)' },
-    bughom:    { bg: 'var(--amber-bg)',  bd: 'var(--amber-bd)',  tx: 'var(--amber-tx)' },
+    tecnica:         { bg: 'var(--teal-bg)',   bd: 'var(--teal-bd)',   tx: 'var(--teal-tx)' },
+    entrega_tecnica: { bg: 'var(--green-bg)', bd: 'var(--green-bd)', tx: 'var(--green-tx)' },
+    bughom:          { bg: 'var(--amber-bg)', bd: 'var(--amber-bd)', tx: 'var(--amber-tx)' },
     bugclient: { bg: 'var(--red-bg)',    bd: 'var(--red-bd)',    tx: 'var(--red-tx)' },
     servico:   { bg: 'var(--orange-bg)', bd: 'var(--orange-bd)', tx: 'var(--orange-tx)' },
   }

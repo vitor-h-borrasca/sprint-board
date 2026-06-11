@@ -44,7 +44,7 @@ export function exportJSON(boardData) {
 }
 
 export function exportCSV(tasks, members, shr, sprintName) {
-  const TYPE_LABELS = { feature: 'Feature', pbi: 'PBI', tecnica: 'Técnica', bughom: 'BugHom' }
+  const TYPE_LABELS = { feature: 'Feature', pbi: 'PBI', tecnica: 'Técnica', entrega_tecnica: 'Entrega Técnica', bughom: 'BugHom' }
   const PRIORITIES = [{ v: 1, label: 'Alta' }, { v: 2, label: 'Média' }, { v: 3, label: 'Baixa' }]
   const STATUSES = { backlog: { label: 'Backlog' }, todo: { label: 'A Fazer' }, inprogress: { label: 'Em Dev' }, inqa: { label: 'Em QA' }, done: { label: 'Concluído' } }
   const headers = ['Sprint','Título','Tipo','Tamanho','Horas','Prioridade','Status','Responsável','Role','Dev Início','Dev Fim','QA Início','QA Fim','Descrição']

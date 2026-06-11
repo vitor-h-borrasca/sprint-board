@@ -4,24 +4,26 @@ export const SIZES = ['PP', 'P', 'M', 'G', 'GG', 'XG']
 export const DEFAULT_SIZE_HRS = { PP: 10, P: 20, M: 40, G: 80, GG: 160, XG: 320 }
 
 // Tipos de tarefa (feature removido do backlog — agora é entidade própria)
-export const TYPES = ['pbi', 'tecnica', 'bughom']
+export const TYPES = ['pbi', 'tecnica', 'entrega_tecnica', 'bughom']
 
 export const TYPE_LABELS = {
-  feature:   'Feature',
-  pbi:       'PBI',
-  tecnica:   'Tech',
-  bughom:    'BugHom',
-  bugclient: 'Bug Client',
-  servico:   'Serviço',
+  feature:         'Feature',
+  pbi:             'PBI',
+  tecnica:         'Tech',
+  entrega_tecnica: 'Entrega Técnica',
+  bughom:          'BugHom',
+  bugclient:       'Bug Client',
+  servico:         'Serviço',
 }
 
 export const TYPE_COLORS = {
-  feature:   'var(--blue)',
-  pbi:       'var(--purple)',
-  tecnica:   'var(--teal)',
-  bughom:    'var(--amber)',
-  bugclient: 'var(--red)',
-  servico:   'var(--orange)',
+  feature:         'var(--blue)',
+  pbi:             'var(--purple)',
+  tecnica:         'var(--teal)',
+  entrega_tecnica: 'var(--green)',
+  bughom:          'var(--amber)',
+  bugclient:       'var(--red)',
+  servico:         'var(--orange)',
 }
 
 // Prioridades

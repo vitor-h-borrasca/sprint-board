@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { fetchTeams } from '@/domain/auth'
+import EntregaTecnicaCreator from './EntregaTecnicaCreator'
 
 const PBI_CREATOR_URL = 'https://criador-de-pbis.vercel.app'
 
@@ -17,6 +18,7 @@ function getAzureConfig() {
 }
 
 export function DocsTab() {
+  const [tab, setTab]       = useState('pbi')   // 'pbi' | 'entrega_tecnica'
   const [status, setStatus] = useState('checking')
   const iframeRef = useRef(null)
   const teamsRef  = useRef([])
@@ -75,6 +77,11 @@ export function DocsTab() {
     sendConfig()
   }
 
+  const TABS = [
+    { k: 'pbi',              icon: 'ti-layout-kanban', label: 'PBI / Feature' },
+    { k: 'entrega_tecnica',  icon: 'ti-code',          label: 'Entrega Técnica' },
+  ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 'calc(100vh - 110px)' }}>
 
@@ -95,73 +102,115 @@ export function DocsTab() {
 
         <div style={{ flex: 1 }} />
 
-        {status === 'checking' && (
-          <span style={{ fontSize: 11, color: 'var(--text3)' }}>⏳ verificando servidor...</span>
-        )}
-        {status === 'online' && (
-          <span style={{ fontSize: 11, color: 'var(--green)' }}>● servidor online</span>
-        )}
-        {status === 'offline' && (
-          <span style={{ fontSize: 11, color: 'var(--red, #ef4444)' }}>
-            ● servidor offline —{' '}
-            <code style={{ fontSize: 11, background: 'var(--surface2)', padding: '1px 6px', borderRadius: 4 }}>
-              npm run start
-            </code>
-            {' '}na pasta <strong>Criador de PBIs</strong>
-          </span>
-        )}
-
-        <a
-          href={PBI_CREATOR_URL}
-          target="_blank"
-          rel="noreferrer"
-          style={{ fontSize: 11, color: 'var(--teal, #2dd4bf)', textDecoration: 'none' }}
-        >
-          ↗ abrir em nova aba
-        </a>
+        {tab === 'pbi' && <>
+          {status === 'checking' && (
+            <span style={{ fontSize: 11, color: 'var(--text3)' }}>⏳ verificando servidor...</span>
+          )}
+          {status === 'online' && (
+            <span style={{ fontSize: 11, color: 'var(--green)' }}>● servidor online</span>
+          )}
+          {status === 'offline' && (
+            <span style={{ fontSize: 11, color: 'var(--red, #ef4444)' }}>
+              ● servidor offline —{' '}
+              <code style={{ fontSize: 11, background: 'var(--surface2)', padding: '1px 6px', borderRadius: 4 }}>
+                npm run start
+              </code>
+              {' '}na pasta <strong>Criador de PBIs</strong>
+            </span>
+          )}
+          <a
+            href={PBI_CREATOR_URL}
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: 11, color: 'var(--teal, #2dd4bf)', textDecoration: 'none' }}
+          >
+            ↗ abrir em nova aba
+          </a>
+        </>}
       </div>
 
-      {/* iframe ou tela offline */}
-      {status === 'offline' ? (
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          gap: 16, color: 'var(--text3)',
-        }}>
-          <span style={{ fontSize: 40 }}>🔌</span>
-          <p style={{ fontSize: 14, color: 'var(--text2)', textAlign: 'center', maxWidth: 360, lineHeight: 1.6 }}>
-            O servidor do Criador de PBIs não está rodando.<br />
-            Abra um terminal na pasta <strong style={{ color: 'var(--text1)' }}>Criador de PBIs</strong> e execute:
-          </p>
-          <code style={{
-            background: 'var(--surface2)', border: '1px solid var(--border)',
-            borderRadius: 8, padding: '10px 20px', fontSize: 13, color: 'var(--teal, #2dd4bf)',
-          }}>
-            npm run start
-          </code>
+      {/* Sub-abas */}
+      <div style={{
+        display: 'flex', gap: 0,
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--surface)',
+        flexShrink: 0,
+        paddingLeft: 20,
+      }}>
+        {TABS.map(({ k, icon, label }) => (
           <button
-            onClick={() => { setStatus('checking'); setTimeout(() => location.reload(), 300) }}
+            key={k}
+            onClick={() => setTab(k)}
             style={{
-              marginTop: 8, padding: '8px 20px', borderRadius: 8,
-              background: 'var(--surface2)', border: '1px solid var(--border)',
-              color: 'var(--text2)', cursor: 'pointer', fontSize: 12,
+              border: 'none',
+              borderBottom: '2px solid ' + (tab === k ? 'var(--orange)' : 'transparent'),
+              borderRadius: 0,
+              background: 'none',
+              padding: '9px 18px',
+              fontSize: 13,
+              gap: 6,
+              display: 'inline-flex', alignItems: 'center',
+              color: tab === k ? 'var(--navy)' : 'var(--text3)',
+              fontWeight: tab === k ? 600 : 400,
+              cursor: 'pointer',
             }}
           >
-            Tentar novamente
+            <i className={'ti ' + icon} style={{ fontSize: 14 }} />
+            {label}
           </button>
+        ))}
+      </div>
+
+      {/* Conteúdo da aba PBI/Feature */}
+      {tab === 'pbi' && (
+        status === 'offline' ? (
+          <div style={{
+            flex: 1, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 16, color: 'var(--text3)',
+          }}>
+            <span style={{ fontSize: 40 }}>🔌</span>
+            <p style={{ fontSize: 14, color: 'var(--text2)', textAlign: 'center', maxWidth: 360, lineHeight: 1.6 }}>
+              O servidor do Criador de PBIs não está rodando.<br />
+              Abra um terminal na pasta <strong style={{ color: 'var(--text1)' }}>Criador de PBIs</strong> e execute:
+            </p>
+            <code style={{
+              background: 'var(--surface2)', border: '1px solid var(--border)',
+              borderRadius: 8, padding: '10px 20px', fontSize: 13, color: 'var(--teal, #2dd4bf)',
+            }}>
+              npm run start
+            </code>
+            <button
+              onClick={() => { setStatus('checking'); setTimeout(() => location.reload(), 300) }}
+              style={{
+                marginTop: 8, padding: '8px 20px', borderRadius: 8,
+                background: 'var(--surface2)', border: '1px solid var(--border)',
+                color: 'var(--text2)', cursor: 'pointer', fontSize: 12,
+              }}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : (
+          <iframe
+            ref={iframeRef}
+            src={PBI_CREATOR_URL}
+            title="Criador de PBIs"
+            onLoad={handleIframeLoad}
+            style={{
+              flex: 1, border: 'none', width: '100%',
+              opacity: status === 'checking' ? 0.4 : 1,
+              transition: 'opacity 0.3s',
+            }}
+          />
+        )
+      )}
+
+      {/* Conteúdo da aba Entrega Técnica */}
+      {tab === 'entrega_tecnica' && (
+        <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
+          <EntregaTecnicaCreator />
         </div>
-      ) : (
-        <iframe
-          ref={iframeRef}
-          src={PBI_CREATOR_URL}
-          title="Criador de PBIs"
-          onLoad={handleIframeLoad}
-          style={{
-            flex: 1, border: 'none', width: '100%',
-            opacity: status === 'checking' ? 0.4 : 1,
-            transition: 'opacity 0.3s',
-          }}
-        />
       )}
     </div>
   )
