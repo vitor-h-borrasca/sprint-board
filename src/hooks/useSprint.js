@@ -6,7 +6,7 @@ export function useSprint() {
   const board  = useBoardStore((s) => s.board)
   const teamAreaPath = useBoardStore((s) => s.teamAreaPath)
 
-  const members     = board.members || []
+  const members     = (board.members || []).filter((m) => m.role !== 'po')
   const activeSlot  = board.sprints.find((s) => s.id === board.activeSprintId) || board.sprints[0]
   const backlogTasks = filterByAreaPath(board.tasks || [], teamAreaPath)
   const sprintTasks  = filterByAreaPath(activeSlot?.tasks || [], teamAreaPath)

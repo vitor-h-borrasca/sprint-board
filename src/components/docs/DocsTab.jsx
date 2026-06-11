@@ -3,13 +3,13 @@ import PbiCreator from './PbiCreator'
 import EntregaTecnicaCreator from './EntregaTecnicaCreator'
 
 const TABS = [
-  { k: 'pbi',             icon: 'ti-layout-kanban', label: 'PBI'             },
   { k: 'feature',         icon: 'ti-stack-2',       label: 'Feature'         },
+  { k: 'pbi',             icon: 'ti-layout-kanban', label: 'PBI'             },
   { k: 'entrega_tecnica', icon: 'ti-code',          label: 'Entrega Técnica' },
 ]
 
 export function DocsTab() {
-  const [tab, setTab] = useState('pbi')
+  const [tab, setTab] = useState('feature')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

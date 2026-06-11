@@ -123,8 +123,8 @@ export default function SetupTab() {
           <AbsenceBlock absences={cfg.generalAbsences || []} onChange={handleAbsences} />
         </div>
 
-        {members.length > 0 && (
-          <CapacityPreview members={members} cfg={cfg} />
+        {members.filter((m) => m.role !== 'po').length > 0 && (
+          <CapacityPreview members={members.filter((m) => m.role !== 'po')} cfg={cfg} />
         )}
 
         <button className="primary" style={{ marginTop: 16 }} onClick={() => store.updateSprintCfg(cfg)}>
