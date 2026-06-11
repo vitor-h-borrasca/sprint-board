@@ -192,10 +192,10 @@ function FieldReview({ label, value }) {
 
 export default function EntregaTecnicaCreator() {
   const boardMembers = useBoardStore(s => s.board?.members || [])
-  // Só membros com email cadastrado
+  const currentTeam  = useBoardStore(s => s.team || '')
   const members = useMemo(
-    () => boardMembers.filter(m => m.email),
-    [boardMembers]
+    () => boardMembers.filter(m => m.email && (!m.team || !currentTeam || m.team === currentTeam)),
+    [boardMembers, currentTeam]
   )
 
   const [mode, setMode]             = useState('criar')

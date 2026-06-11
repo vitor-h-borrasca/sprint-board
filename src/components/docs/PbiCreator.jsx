@@ -296,8 +296,12 @@ function FieldReview({ label, value }) {
 
 export default function PbiCreator() {
   const boardMembers  = useBoardStore(s => s.board?.members || [])
+  const currentTeam   = useBoardStore(s => s.team || '')
   const teamAreaPath  = useBoardStore(s => s.teamAreaPath || '')
-  const members       = useMemo(() => boardMembers.filter(m => m.email), [boardMembers])
+  const members       = useMemo(
+    () => boardMembers.filter(m => m.email && (!m.team || !currentTeam || m.team === currentTeam)),
+    [boardMembers, currentTeam]
+  )
 
   const [workItemType, setWorkItemType] = useState('pbi')       // 'pbi' | 'feature'
   const [mode, setMode]                 = useState('criar')     // 'criar' | 'atualizar'
