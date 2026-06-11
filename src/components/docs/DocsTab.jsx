@@ -85,58 +85,18 @@ export function DocsTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 'calc(100vh - 110px)' }}>
 
-      {/* Barra superior */}
+      {/* Barra superior com abas integradas */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '10px 20px',
+        display: 'flex', alignItems: 'stretch', gap: 0,
+        padding: '0 20px 0 16px',
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
         flexShrink: 0,
       }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text1)' }}>🗂️ Criador de PBIs</span>
-        <span style={{
-          fontSize: 10, fontWeight: 700, padding: '2px 8px',
-          borderRadius: 999, letterSpacing: '0.05em',
-          background: 'var(--purple)', color: '#fff',
-        }}>ANYMARKET</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', alignSelf: 'center', marginRight: 16, whiteSpace: 'nowrap' }}>
+          🗂️ Criador de tarefas
+        </span>
 
-        <div style={{ flex: 1 }} />
-
-        {tab === 'pbi' && <>
-          {status === 'checking' && (
-            <span style={{ fontSize: 11, color: 'var(--text3)' }}>⏳ verificando servidor...</span>
-          )}
-          {status === 'online' && (
-            <span style={{ fontSize: 11, color: 'var(--green)' }}>● servidor online</span>
-          )}
-          {status === 'offline' && (
-            <span style={{ fontSize: 11, color: 'var(--red, #ef4444)' }}>
-              ● servidor offline —{' '}
-              <code style={{ fontSize: 11, background: 'var(--surface2)', padding: '1px 6px', borderRadius: 4 }}>
-                npm run start
-              </code>
-              {' '}na pasta <strong>Criador de PBIs</strong>
-            </span>
-          )}
-          <a
-            href={PBI_CREATOR_URL}
-            target="_blank"
-            rel="noreferrer"
-            style={{ fontSize: 11, color: 'var(--teal, #2dd4bf)', textDecoration: 'none' }}
-          >
-            ↗ abrir em nova aba
-          </a>
-        </>}
-      </div>
-
-      {/* Sub-abas */}
-      <div style={{
-        display: 'flex', gap: 0,
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--surface)',
-        flexShrink: 0,
-        paddingLeft: 20,
-      }}>
         {TABS.map(({ k, icon, label }) => (
           <button
             key={k}
@@ -146,19 +106,47 @@ export function DocsTab() {
               borderBottom: '2px solid ' + (tab === k ? 'var(--orange)' : 'transparent'),
               borderRadius: 0,
               background: 'none',
-              padding: '9px 18px',
+              padding: '11px 16px',
               fontSize: 13,
               gap: 6,
               display: 'inline-flex', alignItems: 'center',
               color: tab === k ? 'var(--navy)' : 'var(--text3)',
               fontWeight: tab === k ? 600 : 400,
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
             }}
           >
             <i className={'ti ' + icon} style={{ fontSize: 14 }} />
             {label}
           </button>
         ))}
+
+        <div style={{ flex: 1 }} />
+
+        {tab === 'pbi' && <>
+          {status === 'checking' && (
+            <span style={{ fontSize: 11, color: 'var(--text3)', alignSelf: 'center' }}>⏳ verificando servidor...</span>
+          )}
+          {status === 'online' && (
+            <span style={{ fontSize: 11, color: 'var(--green)', alignSelf: 'center' }}>● servidor online</span>
+          )}
+          {status === 'offline' && (
+            <span style={{ fontSize: 11, color: 'var(--red, #ef4444)', alignSelf: 'center' }}>
+              ● servidor offline —{' '}
+              <code style={{ fontSize: 11, background: 'var(--surface2)', padding: '1px 6px', borderRadius: 4 }}>
+                npm run start
+              </code>
+            </span>
+          )}
+          <a
+            href={PBI_CREATOR_URL}
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: 11, color: 'var(--teal, #2dd4bf)', textDecoration: 'none', alignSelf: 'center', marginLeft: 12 }}
+          >
+            ↗ abrir em nova aba
+          </a>
+        </>}
       </div>
 
       {/* Conteúdo da aba PBI/Feature */}
