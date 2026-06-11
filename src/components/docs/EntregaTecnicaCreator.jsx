@@ -244,7 +244,8 @@ export default function EntregaTecnicaCreator() {
       ]
 
       const skipped = []
-      async function tryCall() {
+      async function tryCall(retries = 0) {
+        if (retries > 10) throw new Error('Muitas tentativas — verifique os campos e o PAT.')
         try {
           if (mode === 'criar') {
             const numId = parentId.trim() ? parseInt(parentId.trim(), 10) : null
@@ -255,13 +256,17 @@ export default function EntregaTecnicaCreator() {
             return await updateWorkItemFields(id, fields, cfg)
           }
         } catch (err) {
-          const match = err.message?.match(/Cannot find field ([\w.]+)/)
-          if (match) {
-            const badPath = '/fields/' + match[1]
-            skipped.push(match[1])
-            fields = fields.filter(f => f.path !== badPath)
-            if (fields.length === 0) throw new Error('Nenhum campo válido restou após remover campos inválidos.')
-            return tryCall()
+          // Só faz retry quando Azure diz explicitamente que o campo não existe (TF51535)
+          const match = /TF51535[^"]*Cannot find field ([\w.]+)|Cannot find field ([\w.]+)\./i.exec(err.message || '')
+          const badField = match?.[1] || match?.[2]
+          if (badField) {
+            const badPath = '/fields/' + badField
+            if (fields.some(f => f.path === badPath)) {
+              skipped.push(badField)
+              fields = fields.filter(f => f.path !== badPath)
+              if (fields.length === 0) throw new Error('Nenhum campo válido restou após remover campos inválidos.')
+              return tryCall(retries + 1)
+            }
           }
           throw err
         }
