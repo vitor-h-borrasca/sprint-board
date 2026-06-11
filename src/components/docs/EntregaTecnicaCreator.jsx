@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { marked } from 'marked'
 import { createEntregaTecnica, updateWorkItemFields } from '@/domain/azureDevOps'
-import { useBoardStore } from '@/store/useBoardStore'
+import useBoardStore from '@/store/useBoardStore'
 
 const TIPOS  = ['Melhoria Técnica', 'Bug', 'Refatoração']
 const STATES = ['New', 'Em Análise', 'Em Design', 'Em Desenvolvimento', 'Para Code Review', 'Para Homologação', 'Em Homologação', 'Done']
