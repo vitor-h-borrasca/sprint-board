@@ -111,17 +111,21 @@ const FIELD_MAP = [
   { section: 'Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS', path: '/fields/Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS', label: 'Segurança e Privacidade', html: false },
 ]
 
-function parseMarkdown(text) {
+function parseMarkdown(raw) {
+  // Normaliza CRLF → LF para garantir compatibilidade entre SOs
+  const text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   const sections = {}
   // Título: primeira linha H1
   const h1 = text.match(/^# (.+)$/m)
   if (h1) sections['__title__'] = h1[1].trim()
-  // Seções: headers H2 (## ) — cada um vira uma chave com o conteúdo até o próximo H2
+  // Seções: headers H2 — cada um mapeia para um campo Azure DevOps
   const parts = text.split(/^## /m)
   for (const part of parts) {
     const nl = part.indexOf('\n')
     if (nl === -1) continue
-    sections[part.slice(0, nl).trim()] = part.slice(nl + 1).trim()
+    const key = part.slice(0, nl).trim()
+    const content = part.slice(nl + 1).trim()
+    if (key) sections[key] = content
   }
   return sections
 }
