@@ -237,7 +237,6 @@ export default function EntregaTecnicaCreator() {
         { path: '/fields/System.Title', value: review.title || files[0]?.name.replace('.md', '') },
         { path: '/fields/Custom.ANY_Tipo_entrega_tecnica', value: tipo },
         { path: '/fields/System.State', value: state },
-        { path: '/fields/System.AreaPath', value: `${cfg.project}\\Marketplace Global` },
         ...FIELD_MAP.map(({ section, path, html }) => ({
           path,
           value: html
