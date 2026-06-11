@@ -66,19 +66,22 @@ async function callAuth(params) {
   return data
 }
 
-export async function checkUser(email) {
-  // Retorna { hasPassword: bool }
-  return callAuth({ action: 'check_user', user: email })
-}
-
-export async function setPassword(email, pass, confirm) {
-  return callAuth({ action: 'set_password', user: email, pass, confirm })
+export async function setPassword(email, pass) {
+  return callAuth({ action: 'set_password', user: email, pass })
 }
 
 export async function login(email, password) {
   const data = await callAuth({ action: 'login', user: email, pass: password })
   saveSession(email, data.isAdmin === true)
   return data
+}
+
+export async function requestReset(email) {
+  return callAuth({ action: 'request_reset', user: email })
+}
+
+export async function verifyReset(email, code, pass) {
+  return callAuth({ action: 'verify_reset', user: email, code, pass })
 }
 
 export async function fetchTeams() {
