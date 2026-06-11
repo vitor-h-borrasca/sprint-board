@@ -67,6 +67,16 @@ redução de débito técnico, estabilidade, etc.
 N/A
 `
 
+// Mapeamento: seção do .md → campo Azure DevOps
+const FIELD_MAP = [
+  { section: 'System.Description',    path: '/fields/System.Description',                             label: 'Descrição',              html: true },
+  { section: 'Solução Proposta',       path: '/fields/Custom.9ee04e26',                                label: 'Solução Proposta',        html: true },
+  { section: 'Sumário Técnico (STE)', path: '/fields/Custom.STE',                                     label: 'Sumário Técnico (STE)',   html: false },
+  { section: 'Critérios de Aceite',   path: '/fields/Microsoft.VSTS.Common.AcceptanceCriteria',       label: 'Critérios de Aceite',     html: true },
+  { section: 'Valor da Entrega',      path: '/fields/Custom.ANY_ValorEntrega',                        label: 'Valor da Entrega',        html: false },
+  { section: 'Segurança e Privacidade', path: '/fields/Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS', label: 'Segurança e Privacidade', html: false },
+]
+
 function parseMarkdown(text) {
   const sections = {}
   const parts = text.split(/^### /m)
@@ -100,6 +110,31 @@ const LBL = ({ children }) => (
   </div>
 )
 
+// ── Componente de review de um campo ─────────────────────────────────────────
+function FieldReview({ label, value }) {
+  const empty = !value || !value.trim()
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>{label}</span>
+        {empty && <span style={{ fontSize: 10, color: 'var(--amber-tx)', background: 'var(--amber-bg)', border: '1px solid var(--amber-bd)', borderRadius: 4, padding: '1px 6px' }}>vazio</span>}
+      </div>
+      <div style={{
+        background: empty ? 'var(--surface2)' : 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius)',
+        padding: '8px 12px',
+        fontSize: 12, color: empty ? 'var(--text3)' : 'var(--text2)',
+        fontStyle: empty ? 'italic' : 'normal',
+        whiteSpace: 'pre-wrap', lineHeight: 1.6,
+        maxHeight: 120, overflowY: 'auto',
+      }}>
+        {empty ? '(não preenchido no .md)' : value}
+      </div>
+    </div>
+  )
+}
+
 export default function EntregaTecnicaCreator() {
   const [mode, setMode]           = useState('criar')
   const [tipo, setTipo]           = useState('Melhoria Técnica')
@@ -107,7 +142,8 @@ export default function EntregaTecnicaCreator() {
   const [parentId, setParentId]   = useState('')
   const [workItemId, setWorkItemId] = useState('')
   const [files, setFiles]         = useState([])
-  const [result, setResult]       = useState(null)
+  const [review, setReview]       = useState(null)   // { title, sections } — etapa 2
+  const [result, setResult]       = useState(null)   // { ok, message, url } — etapa 3
   const [loading, setLoading]     = useState(false)
 
   function downloadTemplate() {
@@ -124,34 +160,51 @@ export default function EntregaTecnicaCreator() {
       const names = new Set(prev.map(f => f.name))
       return [...prev, ...mds.filter(f => !names.has(f.name))]
     })
+    setReview(null)
+    setResult(null)
   }
 
-  async function submit() {
+  // Etapa 1 → parseia e mostra review
+  async function preencherCampos() {
     if (!files.length) return
-    setLoading(true); setResult(null)
+    setLoading(true)
+    try {
+      const text = await files[0].text()
+      const sections = parseMarkdown(text)
+      const title = sections['Título'] || files[0].name.replace('.md', '')
+      setReview({ title, sections })
+      setResult(null)
+    } catch (err) {
+      setResult({ ok: false, message: 'Erro ao ler o arquivo: ' + err.message })
+    }
+    setLoading(false)
+  }
+
+  // Etapa 2 → cria/atualiza no Azure DevOps
+  async function confirmarCriacao() {
+    if (!review) return
+    setLoading(true)
+    setResult(null)
     const cfg = getAzureConfig()
     if (!cfg.org || !cfg.pat) {
       setResult({ ok: false, message: 'Configure org e PAT do Azure DevOps em Configuração.' })
       setLoading(false); return
     }
     try {
-      const sections = parseMarkdown(await files[0].text())
-      const title = sections['Título'] || files[0].name.replace('.md', '')
       let fields = [
-        { path: '/fields/System.Title',                                   value: title },
-        { path: '/fields/System.Description',                             value: mdToHtml(sections['System.Description'] || '') },
-        { path: '/fields/Custom.9ee04e26',                                value: mdToHtml(sections['Solução Proposta'] || '') },
-        { path: '/fields/Custom.STE',                                     value: sections['Sumário Técnico (STE)'] || '' },
-        { path: '/fields/Microsoft.VSTS.Common.AcceptanceCriteria',       value: mdToHtml(sections['Critérios de Aceite'] || '') },
-        { path: '/fields/Custom.ANY_ValorEntrega',                        value: sections['Valor da Entrega'] || '' },
-        { path: '/fields/Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS', value: sections['Segurança e Privacidade'] || 'N/A' },
-        { path: '/fields/Custom.ANY_Tipo_entrega_tecnica',                value: tipo },
-        { path: '/fields/System.State',                                   value: state },
-        { path: '/fields/System.AreaPath',                                value: `${cfg.project}\\Marketplace Global` },
+        { path: '/fields/System.Title', value: review.title },
+        { path: '/fields/Custom.ANY_Tipo_entrega_tecnica', value: tipo },
+        { path: '/fields/System.State', value: state },
+        { path: '/fields/System.AreaPath', value: `${cfg.project}\\Marketplace Global` },
+        ...FIELD_MAP.map(({ section, path, html }) => ({
+          path,
+          value: html
+            ? mdToHtml(review.sections[section] || '')
+            : (review.sections[section] || ''),
+        })),
       ]
 
       const skipped = []
-
       async function tryCall() {
         try {
           if (mode === 'criar') {
@@ -163,12 +216,12 @@ export default function EntregaTecnicaCreator() {
             return await updateWorkItemFields(id, fields, cfg)
           }
         } catch (err) {
-          // TF51535: campo não encontrado — extrai o nome e tenta sem ele
           const match = err.message?.match(/Cannot find field ([\w.]+)/)
           if (match) {
-            const badField = '/fields/' + match[1]
+            const badPath = '/fields/' + match[1]
             skipped.push(match[1])
-            fields = fields.filter(f => f.path !== badField)
+            fields = fields.filter(f => f.path !== badPath)
+            if (fields.length === 0) throw new Error('Nenhum campo válido restou após remover campos inválidos.')
             return tryCall()
           }
           throw err
@@ -176,10 +229,10 @@ export default function EntregaTecnicaCreator() {
       }
 
       const wi = await tryCall()
-      const wiId = wi.id || parseInt(workItemId.trim(), 10)
-      const url = `https://dev.azure.com/${cfg.org}/${cfg.project}/_workitems/edit/${wiId}`
-      const skipMsg = skipped.length ? ` (campos ignorados: ${skipped.join(', ')})` : ''
-      setResult({ ok: true, message: `Work item #${wiId} ${mode === 'criar' ? 'criado' : 'atualizado'} com sucesso!${skipMsg}`, url })
+      if (!wi || !wi.id) throw new Error('Azure DevOps não retornou o ID do work item criado.')
+      const url = `https://dev.azure.com/${cfg.org}/${cfg.project}/_workitems/edit/${wi.id}`
+      const skipMsg = skipped.length ? ` Campos ignorados (não existem neste projeto): ${skipped.join(', ')}.` : ''
+      setResult({ ok: true, message: `Work item #${wi.id} ${mode === 'criar' ? 'criado' : 'atualizado'} com sucesso!${skipMsg}`, url })
     } catch (err) {
       setResult({ ok: false, message: err.message || 'Erro desconhecido.' })
     }
@@ -189,9 +242,8 @@ export default function EntregaTecnicaCreator() {
   return (
     <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* Card principal */}
+      {/* ── Etapa 1: formulário ── */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 20px 16px' }}>
-
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 18 }}>
           Entrega Técnica — Azure DevOps
         </div>
@@ -200,18 +252,10 @@ export default function EntregaTecnicaCreator() {
         <div style={{ marginBottom: 14 }}>
           <LBL>Modo</LBL>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button
-              onClick={() => setMode('criar')}
-              className={mode === 'criar' ? 'primary' : ''}
-              style={{ fontSize: 12 }}
-            >
+            <button onClick={() => { setMode('criar'); setReview(null); setResult(null) }} className={mode === 'criar' ? 'primary' : ''} style={{ fontSize: 12 }}>
               <i className="ti ti-plus" style={{ fontSize: 13 }} /> Criar novo
             </button>
-            <button
-              onClick={() => setMode('atualizar')}
-              className={mode === 'atualizar' ? 'primary' : ''}
-              style={{ fontSize: 12 }}
-            >
+            <button onClick={() => { setMode('atualizar'); setReview(null); setResult(null) }} className={mode === 'atualizar' ? 'primary' : ''} style={{ fontSize: 12 }}>
               <i className="ti ti-pencil" style={{ fontSize: 13 }} /> Atualizar existente
             </button>
           </div>
@@ -285,11 +329,7 @@ export default function EntregaTecnicaCreator() {
                   <div key={f.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <i className="ti ti-file-text" style={{ color: 'var(--green-tx)', fontSize: 13 }} />
                     <span style={{ fontSize: 12, color: 'var(--text2)' }}>{f.name}</span>
-                    <button
-                      className="ghost"
-                      onClick={e => { e.stopPropagation(); setFiles(p => p.filter(x => x.name !== f.name)) }}
-                      style={{ padding: '1px 5px', fontSize: 11, color: 'var(--red-tx)' }}
-                    >
+                    <button className="ghost" onClick={e => { e.stopPropagation(); setFiles(p => p.filter(x => x.name !== f.name)); setReview(null) }} style={{ padding: '1px 5px', fontSize: 11, color: 'var(--red-tx)' }}>
                       <i className="ti ti-x" />
                     </button>
                   </div>
@@ -300,38 +340,69 @@ export default function EntregaTecnicaCreator() {
           </div>
         </div>
 
-        {/* Resultado */}
-        {result && (
-          <div style={{
-            padding: '10px 14px', borderRadius: 'var(--radius)', fontSize: 12, marginBottom: 14,
-            background: result.ok ? 'var(--green-bg)' : 'var(--red-bg)',
-            border: '1px solid ' + (result.ok ? 'var(--green-bd)' : 'var(--red-bd)'),
-            color: result.ok ? 'var(--green-tx)' : 'var(--red-tx)',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <i className={'ti ' + (result.ok ? 'ti-circle-check' : 'ti-circle-x')} style={{ fontSize: 16, flexShrink: 0 }} />
-            <div>
-              <span style={{ fontWeight: 600 }}>{result.message}</span>
-              {result.url && (
-                <a href={result.url} target="_blank" rel="noreferrer" style={{ display: 'block', fontSize: 11, color: 'var(--green-tx)', marginTop: 2 }}>
-                  Abrir no Azure DevOps ↗
-                </a>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Ações */}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="primary" onClick={submit} disabled={loading || !files.length} style={{ fontSize: 12 }}>
-            {loading
-              ? <><i className="ti ti-loader spin" style={{ fontSize: 13 }} /> Criando...</>
-              : <><i className="ti ti-device-floppy" style={{ fontSize: 13 }} /> Preencher campos</>
+          <button className="primary" onClick={preencherCampos} disabled={loading || !files.length} style={{ fontSize: 12 }}>
+            {loading && !review
+              ? <><i className="ti ti-loader spin" style={{ fontSize: 13 }} /> Lendo...</>
+              : <>Preencher campos <i className="ti ti-arrow-right" style={{ fontSize: 13 }} /></>
             }
           </button>
         </div>
-
       </div>
+
+      {/* ── Etapa 2: review dos campos extraídos ── */}
+      {review && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 20px 16px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 16 }}>
+            Review dos campos
+          </div>
+
+          {/* Título */}
+          <div style={{ marginBottom: 16, padding: '10px 14px', background: 'var(--blue-bg)', border: '1px solid var(--blue-bd)', borderRadius: 'var(--radius-lg)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--blue-tx)', marginBottom: 4 }}>Título</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{review.title}</div>
+          </div>
+
+          {/* Seções mapeadas */}
+          {FIELD_MAP.map(({ section, label }) => (
+            <FieldReview key={section} label={label} value={review.sections[section] || ''} />
+          ))}
+
+          {/* Resultado */}
+          {result && (
+            <div style={{
+              padding: '10px 14px', borderRadius: 'var(--radius)', fontSize: 12, marginBottom: 14,
+              background: result.ok ? 'var(--green-bg)' : 'var(--red-bg)',
+              border: '1px solid ' + (result.ok ? 'var(--green-bd)' : 'var(--red-bd)'),
+              color: result.ok ? 'var(--green-tx)' : 'var(--red-tx)',
+              display: 'flex', alignItems: 'flex-start', gap: 8,
+            }}>
+              <i className={'ti ' + (result.ok ? 'ti-circle-check' : 'ti-circle-x')} style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <span style={{ fontWeight: 600 }}>{result.message}</span>
+                {result.url && (
+                  <a href={result.url} target="_blank" rel="noreferrer" style={{ display: 'block', fontSize: 11, color: 'var(--green-tx)', marginTop: 2 }}>
+                    Abrir no Azure DevOps ↗
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="primary" onClick={confirmarCriacao} disabled={loading || !!result?.ok} style={{ fontSize: 12 }}>
+              {loading
+                ? <><i className="ti ti-loader spin" style={{ fontSize: 13 }} /> {mode === 'criar' ? 'Criando...' : 'Atualizando...'}</>
+                : <><i className="ti ti-device-floppy" style={{ fontSize: 13 }} /> {mode === 'criar' ? 'Criar no Azure DevOps' : 'Atualizar no Azure DevOps'}</>
+              }
+            </button>
+            <button className="ghost" onClick={() => { setReview(null); setResult(null) }} style={{ fontSize: 12 }}>
+              <i className="ti ti-arrow-left" style={{ fontSize: 13 }} /> Voltar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
