@@ -344,7 +344,7 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
     'Microsoft.VSTS.Common.Priority',
     'Custom.Prioridade',
     'Custom.Desenvolvedor',
-    'Custom.any_clienteA',
+    'Custom.Anymarket_ClienteLiberado',
     'Custom.Projeto_integracao',
   ].join(',')
 
@@ -372,7 +372,7 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
     const desenvolvedor = desenvolvedorRaw?.displayName || desenvolvedorRaw || f['System.AssignedTo']?.displayName || ''
 
     // clienteLiberado: pode ser datetime ISO — formata para pt-BR
-    const clienteLiberadoRaw = f['Custom.any_clienteA'] ?? ''
+    const clienteLiberadoRaw = f['Custom.Anymarket_ClienteLiberado'] ?? ''
     const clienteLiberado = clienteLiberadoRaw && typeof clienteLiberadoRaw === 'string' && clienteLiberadoRaw.includes('T')
       ? new Date(clienteLiberadoRaw).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : (clienteLiberadoRaw || '')
