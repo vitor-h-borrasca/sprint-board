@@ -258,7 +258,7 @@ export default function EntregaTecnicaCreator() {
         } catch (err) {
           // Só faz retry quando Azure diz explicitamente que o campo não existe (TF51535)
           const match = /TF51535[^"]*Cannot find field ([\w.]+)|Cannot find field ([\w.]+)\./i.exec(err.message || '')
-          const badField = match?.[1] || match?.[2]
+          const badField = (match?.[1] || match?.[2])?.replace(/\.$/, '')
           if (badField) {
             const badPath = '/fields/' + badField
             if (fields.some(f => f.path === badPath)) {
