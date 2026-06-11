@@ -7,17 +7,21 @@ export const DEFAULT_SIZE_HRS = { PP: 10, P: 20, M: 40, G: 80, GG: 160, XG: 320 
 export const TYPES = ['pbi', 'tecnica', 'bughom']
 
 export const TYPE_LABELS = {
-  feature: 'Feature',
-  pbi: 'PBI',
-  tecnica: 'Tech',
-  bughom: 'BugHom',
+  feature:   'Feature',
+  pbi:       'PBI',
+  tecnica:   'Tech',
+  bughom:    'BugHom',
+  bugclient: 'Bug Client',
+  servico:   'Serviço',
 }
 
 export const TYPE_COLORS = {
-  feature: 'var(--blue)',
-  pbi: 'var(--purple)',
-  tecnica: 'var(--teal)',
-  bughom: 'var(--amber)',
+  feature:   'var(--blue)',
+  pbi:       'var(--purple)',
+  tecnica:   'var(--teal)',
+  bughom:    'var(--amber)',
+  bugclient: 'var(--red)',
+  servico:   'var(--orange)',
 }
 
 // Prioridades

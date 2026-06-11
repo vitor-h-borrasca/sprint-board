@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import useBoardStore from '@/store/useBoardStore'
 import { getAzureConfig } from '@/domain/board'
 import { fetchBugClients, fetchBugHoms, fetchServFabrica } from '@/domain/azureDevOps'
+import { genId } from '@/domain/utils'
 
 // Mapeamento de status → cor
 const STATE_COLOR = {
@@ -46,7 +47,28 @@ function fmtDate(iso) {
     + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
-function BugTable({ items, org, project, showClienteLiberado }) {
+function BugTable({ items, bugType, showClienteLiberado }) {
+  const board      = useBoardStore((s) => s.board)
+  const upsertTask = useBoardStore((s) => s.upsertTask)
+
+  const sprintTasks = board.sprints.find((s) => s.id === board.activeSprintId)?.tasks || []
+  const codesInSprint = new Set(sprintTasks.map((t) => t.code).filter(Boolean))
+
+  function addToSprint(bug) {
+    const typeMap = { client: 'bugclient', hom: 'bughom', fabrica: 'servico' }
+    upsertTask({
+      id:       genId(),
+      code:     String(bug.id),
+      title:    bug.title,
+      type:     typeMap[bugType] || 'bugclient',
+      status:   'todo',
+      priority: 2,
+      sprintId: board.activeSprintId,
+      inSprint: true,
+      areaPath: bug.areaPath || '',
+    })
+  }
+
   if (!items.length) return (
     <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text3)', fontSize: 12 }}>
       <i className="ti ti-circle-check" style={{ fontSize: 22, display: 'block', marginBottom: 6, opacity: 0.3 }} />
@@ -62,6 +84,7 @@ function BugTable({ items, org, project, showClienteLiberado }) {
     { l: 'Prioridade',    w: 90  },
     { l: 'Criado em',     w: 160 },
     ...(showClienteLiberado ? [{ l: 'Cliente liberado', w: 160 }] : []),
+    { l: 'Sprint',        w: 110 },
   ]
 
   return (
@@ -80,45 +103,67 @@ function BugTable({ items, org, project, showClienteLiberado }) {
           </tr>
         </thead>
         <tbody>
-          {items.map((bug, idx) => (
-            <tr key={bug.id}
-              style={{
-                borderBottom: idx < items.length - 1 ? '1px solid var(--border)' : 'none',
-                background: idx % 2 === 0 ? 'var(--surface)' : 'var(--surface2)',
-                transition: 'background .1s',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--navy-hover, rgba(59,130,246,.06))'}
-              onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'}
-            >
-              <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
-                <a href={bug.azureUrl} target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'var(--blue)', fontFamily: 'monospace', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
-                  #{bug.id}
-                </a>
-              </td>
-              <td style={{ padding: '9px 12px', color: 'var(--text)', lineHeight: 1.4, maxWidth: 420 }}>
-                <a href={bug.azureUrl} target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'inherit', textDecoration: 'none' }} title={bug.title}>
-                  {bug.title}
-                </a>
-              </td>
-              <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>{stateBadge(bug.state)}</td>
-              <td style={{ padding: '9px 12px', color: 'var(--text2)', whiteSpace: 'nowrap', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {bug.assignedTo || <span style={{ color: 'var(--text3)' }}>—</span>}
-              </td>
-              <td style={{ padding: '9px 12px', textAlign: 'center' }}>
-                {bug.priority != null ? <PriorityBadge priority={bug.priority} /> : <span style={{ color: 'var(--text3)' }}>—</span>}
-              </td>
-              <td style={{ padding: '9px 12px', color: 'var(--text3)', whiteSpace: 'nowrap', fontSize: 11 }}>
-                {fmtDate(bug.createdDate)}
-              </td>
-              {showClienteLiberado && (
-                <td style={{ padding: '9px 12px', color: 'var(--text3)', whiteSpace: 'nowrap', fontSize: 11 }}>
-                  {bug.clienteLiberado || <span style={{ color: 'var(--text3)' }}>—</span>}
+          {items.map((bug, idx) => {
+            const inSprint = codesInSprint.has(String(bug.id))
+            return (
+              <tr key={bug.id}
+                style={{
+                  borderBottom: idx < items.length - 1 ? '1px solid var(--border)' : 'none',
+                  background: idx % 2 === 0 ? 'var(--surface)' : 'var(--surface2)',
+                  transition: 'background .1s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--navy-hover, rgba(59,130,246,.06))'}
+                onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'}
+              >
+                <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
+                  <a href={bug.azureUrl} target="_blank" rel="noopener noreferrer"
+                    style={{ color: 'var(--blue)', fontFamily: 'monospace', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                    #{bug.id}
+                  </a>
                 </td>
-              )}
-            </tr>
-          ))}
+                <td style={{ padding: '9px 12px', color: 'var(--text)', lineHeight: 1.4, maxWidth: 420 }}>
+                  <a href={bug.azureUrl} target="_blank" rel="noopener noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'none' }} title={bug.title}>
+                    {bug.title}
+                  </a>
+                </td>
+                <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>{stateBadge(bug.state)}</td>
+                <td style={{ padding: '9px 12px', color: 'var(--text2)', whiteSpace: 'nowrap', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {bug.assignedTo || <span style={{ color: 'var(--text3)' }}>—</span>}
+                </td>
+                <td style={{ padding: '9px 12px', textAlign: 'center' }}>
+                  {bug.priority != null ? <PriorityBadge priority={bug.priority} /> : <span style={{ color: 'var(--text3)' }}>—</span>}
+                </td>
+                <td style={{ padding: '9px 12px', color: 'var(--text3)', whiteSpace: 'nowrap', fontSize: 11 }}>
+                  {fmtDate(bug.createdDate)}
+                </td>
+                {showClienteLiberado && (
+                  <td style={{ padding: '9px 12px', color: 'var(--text3)', whiteSpace: 'nowrap', fontSize: 11 }}>
+                    {bug.clienteLiberado || <span style={{ color: 'var(--text3)' }}>—</span>}
+                  </td>
+                )}
+                <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
+                  {inSprint ? (
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, color: 'var(--teal-tx)',
+                      background: 'var(--teal-bg)', border: '1px solid var(--teal-bd)',
+                      borderRadius: 6, padding: '3px 10px',
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <i className="ti ti-check" style={{ fontSize: 11 }} /> Na sprint
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => addToSprint(bug)}
+                      style={{ fontSize: 11, padding: '3px 10px', whiteSpace: 'nowrap' }}
+                    >
+                      <i className="ti ti-circle-plus" style={{ fontSize: 11 }} /> Adicionar
+                    </button>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -234,7 +279,7 @@ export default function BugClientView() {
         {errors.client && <ErrorBanner msg={errors.client} />}
         {loading.client
           ? <LoadingSkeleton />
-          : <BugTable items={filter(data.client)} org={azureConfig.org} project={azureConfig.project} showClienteLiberado />
+          : <BugTable items={filter(data.client)} bugType="client" showClienteLiberado />
         }
       </div>
 
@@ -244,7 +289,7 @@ export default function BugClientView() {
         {errors.hom && <ErrorBanner msg={errors.hom} />}
         {loading.hom
           ? <LoadingSkeleton />
-          : <BugTable items={filter(data.hom)} org={azureConfig.org} project={azureConfig.project} />
+          : <BugTable items={filter(data.hom)} bugType="hom" />
         }
       </div>
 
@@ -254,7 +299,7 @@ export default function BugClientView() {
         {errors.fabrica && <ErrorBanner msg={errors.fabrica} />}
         {loading.fabrica
           ? <LoadingSkeleton />
-          : <BugTable items={filter(data.fabrica)} org={azureConfig.org} project={azureConfig.project} />
+          : <BugTable items={filter(data.fabrica)} bugType="fabrica" />
         }
       </div>
 

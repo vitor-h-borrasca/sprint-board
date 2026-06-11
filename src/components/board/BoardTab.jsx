@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useSprint } from '@/hooks/useSprint'
 import useBoardStore, { filterByAreaPath } from '@/store/useBoardStore'
 import { useAzureSync } from '@/hooks/useAzureSync'
-import { STATUSES } from '@/domain/constants'
+import { STATUSES, AVATAR_PAL } from '@/domain/constants'
 import { fmtHrs } from '@/domain/utils'
 import { taskHrs } from '@/domain/capacity'
 import { TypeBadge, SizeBadge, Avatar } from '@/components/shared'
@@ -178,13 +178,34 @@ export default function BoardTab() {
   )
 }
 
+const BUG_TYPES = new Set(['bugclient', 'bughom', 'servico'])
+
 function BoardCard({ task, shr, members, onMove }) {
-  const assignee = members.find((m) => m.id === task.assigneeId)
+  const patchTask  = useBoardStore((s) => s.patchTask)
+  const assignee   = members.find((m) => m.id === task.assigneeId)
   const qaAssignee = members.find((m) => m.id === task.qaAssigneeId)
+  const isBug      = BUG_TYPES.has(task.type)
 
   const colIdx = BOARD_COLUMNS.indexOf(task.status)
   const canPrev = colIdx > 0
   const canNext = colIdx < BOARD_COLUMNS.length - 1
+
+  const [showAssigneePicker, setShowAssigneePicker] = useState(false)
+  const pickerRef = useRef(null)
+
+  useEffect(() => {
+    if (!showAssigneePicker) return
+    function onClickOutside(e) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) setShowAssigneePicker(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [showAssigneePicker])
+
+  function selectAssignee(memberId) {
+    patchTask(task.id, { assigneeId: memberId })
+    setShowAssigneePicker(false)
+  }
 
   return (
     <div style={{
@@ -206,7 +227,7 @@ function BoardCard({ task, shr, members, onMove }) {
         </div>
       )}
 
-      {/* Tag de fase de execução (mostra quando ao menos um está desmarcado) */}
+      {/* Tag de fase de execução */}
       {(task.sprintExec?.dev === false || task.sprintExec?.qa === false) && (() => {
         const devOn = task.sprintExec?.dev !== false
         const qaOn  = task.sprintExec?.qa  !== false
@@ -221,18 +242,76 @@ function BoardCard({ task, shr, members, onMove }) {
               background: color + '18', color, border: `1px solid ${color}44`,
               display: 'inline-flex', alignItems: 'center', gap: 4,
             }}>
-              <i className={`ti ${icon}`} style={{ fontSize: 10 }} />
-              {label}
+              <i className={`ti ${icon}`} style={{ fontSize: 10 }} />{label}
             </span>
           </div>
         )
       })()}
 
-      {/* Size + avatares */}
+      {/* Size (oculto para bugs) + dev picker + avatares */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <SizeBadge size={task.size} shr={shr} task={task} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          {assignee && <Avatar name={assignee.name} idx={assignee.colorIdx} size={22} />}
+        {!isBug && <SizeBadge size={task.size} shr={shr} task={task} />}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: isBug ? 0 : 'auto' }}>
+          {/* Botão/avatar do dev — clicável para trocar */}
+          <div style={{ position: 'relative' }} ref={isBug || !assignee ? pickerRef : null}>
+            <div
+              onClick={() => setShowAssigneePicker((v) => !v)}
+              title={assignee ? assignee.name : 'Atribuir dev'}
+              style={{ cursor: 'pointer' }}
+            >
+              {assignee
+                ? <Avatar name={assignee.name} idx={assignee.colorIdx} size={22} />
+                : (
+                  <div style={{
+                    width: 22, height: 22, borderRadius: '50%',
+                    border: '1.5px dashed var(--border2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--text3)', fontSize: 11,
+                  }}>
+                    <i className="ti ti-user-plus" style={{ fontSize: 11 }} />
+                  </div>
+                )
+              }
+            </div>
+
+            {showAssigneePicker && (
+              <div ref={assignee ? pickerRef : null} style={{
+                position: 'absolute', bottom: 28, right: 0, zIndex: 50,
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-lg)', padding: 8,
+                boxShadow: '0 4px 16px rgba(0,0,0,.2)',
+                display: 'flex', flexDirection: 'column', gap: 4, minWidth: 160,
+              }}>
+                {members.map((m) => {
+                  const [bg, fg] = AVATAR_PAL[(m.colorIdx || 0) % AVATAR_PAL.length]
+                  const isSelected = task.assigneeId === m.id
+                  return (
+                    <button key={m.id} onClick={() => selectAssignee(m.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '5px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', textAlign: 'left',
+                        background: isSelected ? 'var(--surface2)' : 'transparent',
+                        fontWeight: isSelected ? 600 : 400,
+                      }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: bg, color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, flexShrink: 0 }}>
+                        {m.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: 12, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</span>
+                      {isSelected && <i className="ti ti-check" style={{ fontSize: 11, color: 'var(--teal-tx)', marginLeft: 'auto' }} />}
+                    </button>
+                  )
+                })}
+                {task.assigneeId && (
+                  <button onClick={() => selectAssignee('')}
+                    style={{ fontSize: 11, color: 'var(--text3)', padding: '4px 8px', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', borderTop: '1px solid var(--border)', marginTop: 2, paddingTop: 6 }}>
+                    <i className="ti ti-user-minus" style={{ marginRight: 4 }} />Remover
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           {qaAssignee && qaAssignee.id !== task.assigneeId && (
             <Avatar name={qaAssignee.name} idx={qaAssignee.colorIdx} size={22} />
           )}
