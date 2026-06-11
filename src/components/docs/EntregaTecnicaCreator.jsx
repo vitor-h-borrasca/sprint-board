@@ -103,13 +103,15 @@ N/A
 
 // Mapeamento: header H2 do .md → campo Azure DevOps
 // Os headers seguem exatamente o nome do campo no Azure DevOps
+const SOLUCAO_SECTION   = 'Custom.9ee04e26 (Solução Proposta)'
+const STE_SECTION       = 'Custom.STE (Sumário Técnico da Entrega)'
+
 const FIELD_MAP = [
-  { section: 'System.Description',                            path: '/fields/System.Description',                             label: 'Descrição',              html: true  },
-  { section: 'Custom.9ee04e26 (Solução Proposta)',             path: '/fields/Custom.9ee04e26',                                label: 'Solução Proposta',        html: true  },
-  { section: 'Custom.STE (Sumário Técnico da Entrega)',        path: '/fields/Custom.STE',                                     label: 'Sumário Técnico (STE)',   html: false },
-  { section: 'Microsoft.VSTS.Common.AcceptanceCriteria',       path: '/fields/Microsoft.VSTS.Common.AcceptanceCriteria',       label: 'Critérios de Aceite',     html: true  },
-  { section: 'Custom.ANY_ValorEntrega',                        path: '/fields/Custom.ANY_ValorEntrega',                        label: 'Valor da Entrega',        html: false },
-  { section: 'Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS', path: '/fields/Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS', label: 'Segurança e Privacidade', html: false },
+  { section: 'System.Description',                            path: '/fields/System.Description',                                        label: 'Descrição',              html: true  },
+  { section: SOLUCAO_SECTION,                                  path: '/fields/Custom.9ee04e26-297a-4523-a62d-0e6b433c9ed7',               label: 'Solução Proposta',        html: true  },
+  { section: 'Microsoft.VSTS.Common.AcceptanceCriteria',       path: '/fields/Microsoft.VSTS.Common.AcceptanceCriteria',                  label: 'Critérios de Aceite',     html: true  },
+  { section: 'Custom.ANY_ValorEntrega',                        path: '/fields/Custom.ANY_ValorEntrega',                                   label: 'Valor da Entrega',        html: true  },
+  { section: 'Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS', path: '/fields/Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS',            label: 'Segurança e Privacidade', html: true  },
 ]
 
 function parseMarkdown(raw) {
@@ -245,12 +247,14 @@ export default function EntregaTecnicaCreator() {
     try {
       let fields = [
         { path: '/fields/System.Title', value: review.title || files[0]?.name.replace('.md', '') },
-        ...FIELD_MAP.map(({ section, path, html }) => ({
-          path,
-          value: html
-            ? mdToHtml(review.sections[section] || '')
-            : mdToPlain(review.sections[section] || ''),
-        })),
+        ...FIELD_MAP.map(({ section, path, html }) => {
+          let raw = review.sections[section] || ''
+          // Combina STE dentro do campo Solução Proposta
+          if (section === SOLUCAO_SECTION && review.sections[STE_SECTION]) {
+            raw = raw + '\n\n---\n\n**Sumário Técnico da Entrega (STE)**\n\n' + review.sections[STE_SECTION]
+          }
+          return { path, value: html ? mdToHtml(raw) : mdToPlain(raw) }
+        }),
       ]
 
       const skipped = []
