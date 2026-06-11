@@ -4,82 +4,120 @@ import { createEntregaTecnica, updateWorkItemFields } from '@/domain/azureDevOps
 const TIPOS  = ['Melhoria Técnica', 'Bug', 'Refatoração']
 const STATES = ['Em Análise', 'Em Desenvolvimento', 'Para Code Review', 'Em Code Review', 'Para Homologação', 'Em Homologação', 'Done']
 
-const TEMPLATE_MD = `---
-tipo: Melhoria Técnica
----
+const TEMPLATE_MD = `# [MARKETPLACE] [MÓDULO] — descrição objetiva da entrega
 
-### Título
-[MARKETPLACE] [MÓDULO] — descrição objetiva da entrega
+## System.Description
 
-### System.Description
-🔗 Referências
+### 🔗 Referências
+
 - Classes/métodos envolvidos:
 - APIs ou endpoints relacionados:
 - PRs ou issues de referência:
 
-🎯 O que estamos resolvendo?
+---
+
+### 🎯 O que estamos resolvendo?
+
 - Descrição objetiva do problema técnico
 
-🔎 Pontos de atenção
+---
+
+### 🔎 Pontos de atenção
+
 - Riscos, impactos colaterais, dependências
 
-### Solução Proposta
-📌 Premissas
+---
+
+## Custom.9ee04e26 (Solução Proposta)
+
+### 📌 Premissas
+
 - Condições técnicas que devem existir
 
-📋 Requisitos
+---
+
+### 📋 Requisitos
+
 - Requisito 1
 - Requisito 2
 
-⚙️ Solução Proposta
+---
+
+### ⚙️ Solução Proposta
+
 - Descrição detalhada da implementação
 
-🔄 Comportamento Esperado
+---
+
+### 🔄 Comportamento Esperado
+
 - Como o sistema deve se comportar após a entrega
 
-⚠️ Tratativas de Exceção
+---
+
+### ⚠️ Tratativas de Exceção
+
 - Cenário de falha: recuperável ou irrecuperável
 
-### Sumário Técnico (STE)
+---
+
+## Custom.STE (Sumário Técnico da Entrega)
+
 Texto objetivo e direto descrevendo o que será feito.
 Sem estrutura de tópicos — máximo 5 linhas.
 
-### Critérios de Aceite
-✅ Critérios de Aceite
+---
 
-Cenário 1 — [Nome do cenário de sucesso]
+## Microsoft.VSTS.Common.AcceptanceCriteria
+
+### ✅ Critérios de Aceite
+
+**Cenário 1 — [Nome do cenário de sucesso]**
 - Dado [contexto]
 - Quando [ação executada]
 - Então [resultado esperado]
 
-Cenário 2 — [Nome do cenário de regressão]
+**Cenário 2 — [Nome do cenário de regressão]**
 - Dado [contexto]
 - Quando [condição]
 - Então [comportamento esperado]
 
-### Valor da Entrega
-💼 Valor da Entrega
+---
+
+## Custom.ANY_ValorEntrega
+
+### 💼 Valor da Entrega
+
 Impacto técnico gerado: performance, manutenibilidade,
 redução de débito técnico, estabilidade, etc.
 
-### Segurança e Privacidade
-🔒 Análise de Impacto — Segurança e Privacidade
+---
+
+## Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS
+
+### 🔒 Análise de Impacto — Segurança e Privacidade
+
 N/A
 `
 
-// Mapeamento: seção do .md → campo Azure DevOps
+// Mapeamento: header H2 do .md → campo Azure DevOps
+// Os headers seguem exatamente o nome do campo no Azure DevOps
 const FIELD_MAP = [
-  { section: 'System.Description',    path: '/fields/System.Description',                             label: 'Descrição',              html: true },
-  { section: 'Solução Proposta',       path: '/fields/Custom.9ee04e26',                                label: 'Solução Proposta',        html: true },
-  { section: 'Sumário Técnico (STE)', path: '/fields/Custom.STE',                                     label: 'Sumário Técnico (STE)',   html: false },
-  { section: 'Critérios de Aceite',   path: '/fields/Microsoft.VSTS.Common.AcceptanceCriteria',       label: 'Critérios de Aceite',     html: true },
-  { section: 'Valor da Entrega',      path: '/fields/Custom.ANY_ValorEntrega',                        label: 'Valor da Entrega',        html: false },
-  { section: 'Segurança e Privacidade', path: '/fields/Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS', label: 'Segurança e Privacidade', html: false },
+  { section: 'System.Description',                            path: '/fields/System.Description',                             label: 'Descrição',              html: true  },
+  { section: 'Custom.9ee04e26 (Solução Proposta)',             path: '/fields/Custom.9ee04e26',                                label: 'Solução Proposta',        html: true  },
+  { section: 'Custom.STE (Sumário Técnico da Entrega)',        path: '/fields/Custom.STE',                                     label: 'Sumário Técnico (STE)',   html: false },
+  { section: 'Microsoft.VSTS.Common.AcceptanceCriteria',       path: '/fields/Microsoft.VSTS.Common.AcceptanceCriteria',       label: 'Critérios de Aceite',     html: true  },
+  { section: 'Custom.ANY_ValorEntrega',                        path: '/fields/Custom.ANY_ValorEntrega',                        label: 'Valor da Entrega',        html: false },
+  { section: 'Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS', path: '/fields/Custom.ANALISE_IMPACTO_SI_PRIVACIDADE_ANYTOOLS', label: 'Segurança e Privacidade', html: false },
 ]
 
 function parseMarkdown(text) {
   const sections = {}
-  const parts = text.split(/^### /m)
+  // Título: primeira linha H1
+  const h1 = text.match(/^# (.+)$/m)
+  if (h1) sections['__title__'] = h1[1].trim()
+  // Seções: headers H2 (## ) — cada um vira uma chave com o conteúdo até o próximo H2
+  const parts = text.split(/^## /m)
   for (const part of parts) {
     const nl = part.indexOf('\n')
     if (nl === -1) continue
@@ -171,7 +209,7 @@ export default function EntregaTecnicaCreator() {
     try {
       const text = await files[0].text()
       const sections = parseMarkdown(text)
-      const title = sections['Título'] || files[0].name.replace('.md', '')
+      const title = sections['__title__'] || files[0].name.replace('.md', '')
       setReview({ title, sections })
       setResult(null)
     } catch (err) {
@@ -192,7 +230,7 @@ export default function EntregaTecnicaCreator() {
     }
     try {
       let fields = [
-        { path: '/fields/System.Title', value: review.title },
+        { path: '/fields/System.Title', value: review.title || files[0]?.name.replace('.md', '') },
         { path: '/fields/Custom.ANY_Tipo_entrega_tecnica', value: tipo },
         { path: '/fields/System.State', value: state },
         { path: '/fields/System.AreaPath', value: `${cfg.project}\\Marketplace Global` },
