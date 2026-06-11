@@ -294,7 +294,7 @@ function FieldReview({ label, value }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function PbiCreator() {
+export default function PbiCreator({ defaultType = 'pbi' }) {
   const boardMembers  = useBoardStore(s => s.board?.members || [])
   const currentTeam   = useBoardStore(s => s.team || '')
   const teamAreaPath  = useBoardStore(s => s.teamAreaPath || '')
@@ -303,7 +303,7 @@ export default function PbiCreator() {
     [boardMembers, currentTeam]
   )
 
-  const [workItemType, setWorkItemType] = useState('pbi')       // 'pbi' | 'feature'
+  const workItemType = defaultType                              // fixo pela aba
   const [mode, setMode]                 = useState('criar')     // 'criar' | 'atualizar'
   const [state, setState]               = useState('Em Análise')
   const [assignedTo, setAssignedTo]     = useState('')
@@ -479,20 +479,7 @@ export default function PbiCreator() {
       {/* ── Etapa 1: formulário ── */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 20px 16px' }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 18 }}>
-          PBI / Feature — Azure DevOps
-        </div>
-
-        {/* Tipo de work item */}
-        <div style={{ marginBottom: 14 }}>
-          <LBL>Tipo</LBL>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {[{ k: 'pbi', label: 'PBI' }, { k: 'feature', label: 'Feature' }].map(({ k, label }) => (
-              <button key={k} onClick={() => { setWorkItemType(k); setReview(null); setResult(null); setState(k === 'pbi' ? 'Em Análise' : 'New') }}
-                className={workItemType === k ? 'primary' : ''} style={{ fontSize: 12 }}>
-                {label}
-              </button>
-            ))}
-          </div>
+          {workItemType === 'pbi' ? 'PBI' : 'Feature'} — Azure DevOps
         </div>
 
         {/* Modo */}

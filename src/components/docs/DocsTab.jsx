@@ -3,8 +3,9 @@ import PbiCreator from './PbiCreator'
 import EntregaTecnicaCreator from './EntregaTecnicaCreator'
 
 const TABS = [
-  { k: 'pbi',             icon: 'ti-layout-kanban', label: 'PBI / Feature'    },
-  { k: 'entrega_tecnica', icon: 'ti-code',          label: 'Entrega Técnica'  },
+  { k: 'pbi',             icon: 'ti-layout-kanban', label: 'PBI'             },
+  { k: 'feature',         icon: 'ti-stack-2',       label: 'Feature'         },
+  { k: 'entrega_tecnica', icon: 'ti-code',          label: 'Entrega Técnica' },
 ]
 
 export function DocsTab() {
@@ -52,7 +53,12 @@ export function DocsTab() {
         {/* Conteúdo */}
         {tab === 'pbi' && (
           <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
-            <PbiCreator />
+            <PbiCreator defaultType="pbi" />
+          </div>
+        )}
+        {tab === 'feature' && (
+          <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
+            <PbiCreator defaultType="feature" />
           </div>
         )}
         {tab === 'entrega_tecnica' && (
