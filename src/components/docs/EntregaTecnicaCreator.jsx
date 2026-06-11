@@ -137,7 +137,7 @@ export default function EntregaTecnicaCreator() {
     try {
       const sections = parseMarkdown(await files[0].text())
       const title = sections['Título'] || files[0].name.replace('.md', '')
-      const fields = [
+      let fields = [
         { path: '/fields/System.Title',                                   value: title },
         { path: '/fields/System.Description',                             value: mdToHtml(sections['System.Description'] || '') },
         { path: '/fields/Custom.9ee04e26',                                value: mdToHtml(sections['Solução Proposta'] || '') },
@@ -149,19 +149,37 @@ export default function EntregaTecnicaCreator() {
         { path: '/fields/System.State',                                   value: state },
         { path: '/fields/System.AreaPath',                                value: `${cfg.project}\\Marketplace Global` },
       ]
-      let url
-      if (mode === 'criar') {
-        const numId = parentId.trim() ? parseInt(parentId.trim(), 10) : null
-        const wi = await createEntregaTecnica(fields, numId, cfg)
-        url = `https://dev.azure.com/${cfg.org}/${cfg.project}/_workitems/edit/${wi.id}`
-        setResult({ ok: true, message: `Work item #${wi.id} criado com sucesso!`, url })
-      } else {
-        const id = parseInt(workItemId.trim(), 10)
-        if (!id) throw new Error('ID do work item inválido.')
-        await updateWorkItemFields(id, fields, cfg)
-        url = `https://dev.azure.com/${cfg.org}/${cfg.project}/_workitems/edit/${id}`
-        setResult({ ok: true, message: `Work item #${id} atualizado com sucesso!`, url })
+
+      const skipped = []
+
+      async function tryCall() {
+        try {
+          if (mode === 'criar') {
+            const numId = parentId.trim() ? parseInt(parentId.trim(), 10) : null
+            return await createEntregaTecnica(fields, numId, cfg)
+          } else {
+            const id = parseInt(workItemId.trim(), 10)
+            if (!id) throw new Error('ID do work item inválido.')
+            return await updateWorkItemFields(id, fields, cfg)
+          }
+        } catch (err) {
+          // TF51535: campo não encontrado — extrai o nome e tenta sem ele
+          const match = err.message?.match(/Cannot find field ([\w.]+)/)
+          if (match) {
+            const badField = '/fields/' + match[1]
+            skipped.push(match[1])
+            fields = fields.filter(f => f.path !== badField)
+            return tryCall()
+          }
+          throw err
+        }
       }
+
+      const wi = await tryCall()
+      const wiId = wi.id || parseInt(workItemId.trim(), 10)
+      const url = `https://dev.azure.com/${cfg.org}/${cfg.project}/_workitems/edit/${wiId}`
+      const skipMsg = skipped.length ? ` (campos ignorados: ${skipped.join(', ')})` : ''
+      setResult({ ok: true, message: `Work item #${wiId} ${mode === 'criar' ? 'criado' : 'atualizado'} com sucesso!${skipMsg}`, url })
     } catch (err) {
       setResult({ ok: false, message: err.message || 'Erro desconhecido.' })
     }
