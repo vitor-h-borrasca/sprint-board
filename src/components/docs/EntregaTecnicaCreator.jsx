@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { marked } from 'marked'
 import { createEntregaTecnica, updateWorkItemFields, fetchProjectMembers } from '@/domain/azureDevOps'
+import { useBoardStore } from '@/store/useBoardStore'
 
 const TIPOS  = ['Melhoria Técnica', 'Bug', 'Refatoração']
 const STATES = ['New', 'Em Análise', 'Em Design', 'Em Desenvolvimento', 'Para Code Review', 'Para Homologação', 'Em Homologação', 'Done']
@@ -190,6 +191,7 @@ function FieldReview({ label, value }) {
 }
 
 export default function EntregaTecnicaCreator() {
+  const currentTeam = useBoardStore(s => s.team)
   const [mode, setMode]             = useState('criar')
   const [tipo, setTipo]             = useState('Melhoria Técnica')
   const [state, setState]           = useState('Em Análise')
@@ -205,13 +207,11 @@ export default function EntregaTecnicaCreator() {
   useEffect(() => {
     const cfg = getAzureConfig()
     if (!cfg.org || !cfg.pat) return
-    fetchProjectMembers(cfg).then(list => {
+    fetchProjectMembers(cfg, currentTeam).then(list => {
       setMembers(list)
-      // pré-seleciona o próprio usuário se encontrado pelo email
-      const me = list.find(m => m.uniqueName === cfg.pat?.split('@')?.[0] + '@' || list[0])
       if (list.length && !assignedTo) setAssignedTo(list[0].uniqueName)
     }).catch(() => {})
-  }, [])
+  }, [currentTeam])
 
   function downloadTemplate() {
     const blob = new Blob([TEMPLATE_MD], { type: 'text/markdown;charset=utf-8' })

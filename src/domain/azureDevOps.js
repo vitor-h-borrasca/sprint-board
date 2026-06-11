@@ -504,18 +504,33 @@ async function _fetchBugItems(wiql, org, project, pat) {
 
 // ── Criação / atualização de work items ───────────────────────────────────────
 
-export async function fetchProjectMembers({ org, project, pat }) {
-  const res = await fetch(
-    `${API_ORG(org)}/projects/${encodeURIComponent(project)}/teams?api-version=7.0`,
-    { headers: headers(pat) }
-  )
-  if (!res.ok) return []
-  const { value: teams } = await res.json()
+export async function fetchProjectMembers({ org, project, pat }, teamName = null) {
+  // Se tem time específico, busca direto; senão busca todos os times do projeto
+  let teamIds = []
+  if (teamName) {
+    const r = await fetch(
+      `${API_ORG(org)}/projects/${encodeURIComponent(project)}/teams?api-version=7.0`,
+      { headers: headers(pat) }
+    )
+    if (!r.ok) return []
+    const { value: teams } = await r.json()
+    const match = (teams || []).find(t => t.name === teamName)
+    if (match) teamIds = [match.id]
+  }
+  if (!teamIds.length) {
+    const r = await fetch(
+      `${API_ORG(org)}/projects/${encodeURIComponent(project)}/teams?api-version=7.0`,
+      { headers: headers(pat) }
+    )
+    if (!r.ok) return []
+    const { value: teams } = await r.json()
+    teamIds = (teams || []).slice(0, 5).map(t => t.id)
+  }
   const seen = new Set()
   const members = []
-  await Promise.all((teams || []).slice(0, 5).map(async team => {
+  await Promise.all(teamIds.map(async id => {
     const r = await fetch(
-      `${API_ORG(org)}/projects/${encodeURIComponent(project)}/teams/${team.id}/members?api-version=7.0`,
+      `${API_ORG(org)}/projects/${encodeURIComponent(project)}/teams/${id}/members?api-version=7.0`,
       { headers: headers(pat) }
     )
     if (!r.ok) return
