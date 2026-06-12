@@ -160,6 +160,7 @@ export default function FeaturesTab() {
               onAddTasks={(tasks) => tasks.forEach((t) => store.upsertTask(t))}
               onLinkTasks={(ids, featureId) => ids.forEach((id) => store.patchTask(id, { featureId }))}
               onPatchTask={(id, patch) => store.patchTask(id, patch)}
+              onDeleteTask={(id) => store.deleteTask(id)}
             />
           )
         })}
@@ -168,7 +169,7 @@ export default function FeaturesTab() {
   )
 }
 
-function FeatureRow({ feature, linkedTasks, allTasks, azureConfig, azureReady, onRename, onRecode, onRemove, onAddTasks, onLinkTasks, onPatchTask }) {
+function FeatureRow({ feature, linkedTasks, allTasks, azureConfig, azureReady, onRename, onRecode, onRemove, onAddTasks, onLinkTasks, onPatchTask, onDeleteTask }) {
   const [editName, setEditName] = useState(feature.name)
   const [editCode, setEditCode] = useState(feature.code || '')
   const [expanded, setExpanded] = useState(false)
@@ -197,17 +198,24 @@ function FeatureRow({ feature, linkedTasks, allTasks, azureConfig, azureReady, o
         const code = String(wi.id)
         const areaPath = wi.fields?.['System.AreaPath'] || ''
         const existing = codeToTask[code]
+        const state = wi.fields?.['System.State'] || ''
+        const DONE_STATES = ['Done', 'Avaliação de entrega']
         if (!existing) {
-          newTasks.push({ id: genId(), createdAt: Date.now(), ...mapPbiToTask(wi, feature.id) })
+          if (!DONE_STATES.includes(state)) {
+            newTasks.push({ id: genId(), createdAt: Date.now(), ...mapPbiToTask(wi, feature.id) })
+          }
         } else {
-          if (existing.featureId !== feature.id) toLink.push(existing)
-          const patch = {}
-          const title = wi.fields?.['System.Title'] || ''
-          const state = wi.fields?.['System.State'] || ''
-          if (title && existing.title !== title) patch.title = title
-          if (state && existing.azureState !== state) patch.azureState = state
-          if (areaPath && existing.areaPath !== areaPath) patch.areaPath = areaPath
-          if (Object.keys(patch).length > 0) onPatchTask(existing.id, patch)
+          if (DONE_STATES.includes(state)) {
+            onDeleteTask(existing.id)
+          } else {
+            if (existing.featureId !== feature.id) toLink.push(existing)
+            const patch = {}
+            const title = wi.fields?.['System.Title'] || ''
+            if (title && existing.title !== title) patch.title = title
+            if (state && existing.azureState !== state) patch.azureState = state
+            if (areaPath && existing.areaPath !== areaPath) patch.areaPath = areaPath
+            if (Object.keys(patch).length > 0) onPatchTask(existing.id, patch)
+          }
         }
       }
 
