@@ -303,6 +303,7 @@ export default function BugHomCreator() {
         { op: 'add', path: '/fields/Custom.Dominio_Any',                           value: dominio },
         { op: 'add', path: '/fields/Custom.c275abe4-37d0-475c-8bdf-ed551c63b585', value: origemHom },
         { op: 'add', path: '/fields/Custom.Causadoproblema',                       value: causaRaiz },
+        { op: 'add', path: '/fields/Custom.Origemdeentrada',                       value: 'Engenharia' },
         { op: 'add', path: '/fields/Custom.Time',                                  value: 'Integrations - Marketplace' },
         { op: 'add', path: '/fields/Custom.Projeto_integracao',                    value: projetoIntegracao || 'ANY_GLOBAL' },
         { op: 'add', path: '/fields/System.State',         value: 'New' },
