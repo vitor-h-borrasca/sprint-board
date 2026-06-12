@@ -5,6 +5,7 @@ import { fetchTeams } from '@/domain/auth'
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
 
+const ORIGEM_ENTRADA_OPTS = ['Engenharia', 'Implantação']
 const PRIORIDADE_OPTS  = ['1 - Crítico', '2 - Alto', '3 - Médio', '4 - Baixo']
 const TECNICO_OPTS     = ['NÃO', 'SIM']
 const MARKETPLACE_OPTS = ['Shopee', 'TikTok', 'Shein', 'Dafiti', 'AliExpress', 'TEMU']
@@ -250,7 +251,8 @@ export default function BugHomCreator() {
   const [marketplace, setMarketplace] = useState(MARKETPLACE_OPTS[0])
   const [dominio, setDominio]         = useState(DOMINIO_OPTS[0])
   const [subDominio, setSubDominio]   = useState('')
-  const [origemHom, setOrigemHom]     = useState(ORIGEM_HOT_OPTS[0])
+  const [origemEntrada, setOrigemEntrada] = useState(ORIGEM_ENTRADA_OPTS[0])
+  const [origemHom, setOrigemHom]         = useState(ORIGEM_HOT_OPTS[0])
   const [causaRaiz, setCausaRaiz]     = useState(CAUSA_RAIZ_OPTS[0])
 
   const dominioSub = DOMINIO_SUBS[dominio] || null
@@ -320,7 +322,7 @@ export default function BugHomCreator() {
         ...(dominioSub && subDominio ? [{ op: 'add', path: '/fields/' + dominioSub.field, value: subDominio }] : []),
         { op: 'add', path: '/fields/Custom.c275abe4-37d0-475c-8bdf-ed551c63b585', value: origemHom },
         { op: 'add', path: '/fields/Custom.Causadoproblema',                       value: causaRaiz },
-        { op: 'add', path: '/fields/Custom.Origemdeentrada',                       value: 'Engenharia' },
+        { op: 'add', path: '/fields/Custom.Origemdeentrada',                       value: origemEntrada },
         { op: 'add', path: '/fields/Custom.Time',                                  value: 'Integrations - Marketplace' },
         { op: 'add', path: '/fields/Custom.Projeto_integracao',                    value: projetoIntegracao || 'ANY_GLOBAL' },
         { op: 'add', path: '/fields/System.State',         value: 'New' },
@@ -484,6 +486,12 @@ export default function BugHomCreator() {
             <LBL>Causa raiz</LBL>
             <select value={causaRaiz} onChange={e => setCausaRaiz(e.target.value)} style={{ fontSize: 12 }}>
               {CAUSA_RAIZ_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+          <div>
+            <LBL>Origem de entrada</LBL>
+            <select value={origemEntrada} onChange={e => setOrigemEntrada(e.target.value)} style={{ fontSize: 12 }}>
+              {ORIGEM_ENTRADA_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
         </div>
