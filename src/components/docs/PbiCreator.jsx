@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { marked } from 'marked'
 import useBoardStore from '@/store/useBoardStore'
+import { fetchTeams } from '@/domain/auth'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -299,6 +300,17 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
   const currentTeam           = useBoardStore(s => s.team || '')
   const teamAreaPath          = useBoardStore(s => s.teamAreaPath || '')
   const teamProjetoIntegracao = useBoardStore(s => s.teamProjetoIntegracao || '')
+
+  const [projetoIntegracaoOpts, setProjetoIntegracaoOpts] = useState([])
+  const [projetoIntegracao, setProjetoIntegracao]         = useState('')
+
+  useEffect(() => {
+    fetchTeams().then(list => {
+      const opts = [...new Set(list.map(t => t.projetoIntegracao).filter(Boolean))]
+      setProjetoIntegracaoOpts(opts)
+      setProjetoIntegracao(teamProjetoIntegracao || opts[0] || '')
+    }).catch(() => {})
+  }, [teamProjetoIntegracao])
   const members       = useMemo(
     () => boardMembers.filter(m => m.email && (!m.team || !currentTeam || m.team === currentTeam)),
     [boardMembers, currentTeam]
@@ -546,7 +558,10 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
           </div>
           <div>
             <LBL>Projeto Integração</LBL>
-            <input value={teamProjetoIntegracao} readOnly style={{ fontSize: 12, background: 'var(--surface2)', cursor: 'default' }} />
+            <select value={projetoIntegracao} onChange={e => setProjetoIntegracao(e.target.value)} style={{ fontSize: 12 }}>
+              {projetoIntegracaoOpts.length === 0 && <option value="">— carregando —</option>}
+              {projetoIntegracaoOpts.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
           </div>
         </div>
 

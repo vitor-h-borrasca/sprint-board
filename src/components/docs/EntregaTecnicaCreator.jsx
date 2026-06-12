@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { marked } from 'marked'
 import { createEntregaTecnica, updateWorkItemFields } from '@/domain/azureDevOps'
 import useBoardStore from '@/store/useBoardStore'
+import { fetchTeams } from '@/domain/auth'
 
 const TIPOS  = ['Melhoria Técnica', 'Bug', 'Refatoração']
 const STATES = ['New', 'Em Análise', 'Em Design', 'Em Desenvolvimento', 'Para Code Review', 'Para Homologação', 'Em Homologação', 'Done']
@@ -194,6 +195,17 @@ export default function EntregaTecnicaCreator() {
   const boardMembers          = useBoardStore(s => s.board?.members || [])
   const currentTeam           = useBoardStore(s => s.team || '')
   const teamProjetoIntegracao = useBoardStore(s => s.teamProjetoIntegracao || '')
+
+  const [projetoIntegracaoOpts, setProjetoIntegracaoOpts] = useState([])
+  const [projetoIntegracao, setProjetoIntegracao]         = useState('')
+
+  useEffect(() => {
+    fetchTeams().then(list => {
+      const opts = [...new Set(list.map(t => t.projetoIntegracao).filter(Boolean))]
+      setProjetoIntegracaoOpts(opts)
+      setProjetoIntegracao(teamProjetoIntegracao || opts[0] || '')
+    }).catch(() => {})
+  }, [teamProjetoIntegracao])
   const members = useMemo(
     () => boardMembers.filter(m => m.email && (!m.team || !currentTeam || m.team === currentTeam)),
     [boardMembers, currentTeam]
@@ -386,7 +398,10 @@ export default function EntregaTecnicaCreator() {
           </div>
           <div>
             <LBL>Projeto Integração</LBL>
-            <input value={teamProjetoIntegracao} readOnly style={{ fontSize: 12, background: 'var(--surface2)', cursor: 'default' }} />
+            <select value={projetoIntegracao} onChange={e => setProjetoIntegracao(e.target.value)} style={{ fontSize: 12 }}>
+              {projetoIntegracaoOpts.length === 0 && <option value="">— carregando —</option>}
+              {projetoIntegracaoOpts.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
           </div>
         </div>
 
