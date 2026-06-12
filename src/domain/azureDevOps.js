@@ -94,6 +94,7 @@ const AZURE_TYPE_MAP = {
   'Product Backlog Item': 'pbi',
   'Bug':                 'bughom',
   'Entrega Técnica':     'entrega_tecnica',
+  'Entrega Tecnica':     'entrega_tecnica',
   'Task':                'tecnica',
 }
 
