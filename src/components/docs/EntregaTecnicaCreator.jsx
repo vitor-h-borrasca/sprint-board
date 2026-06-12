@@ -191,8 +191,9 @@ function FieldReview({ label, value }) {
 }
 
 export default function EntregaTecnicaCreator() {
-  const boardMembers = useBoardStore(s => s.board?.members || [])
-  const currentTeam  = useBoardStore(s => s.team || '')
+  const boardMembers          = useBoardStore(s => s.board?.members || [])
+  const currentTeam           = useBoardStore(s => s.team || '')
+  const teamProjetoIntegracao = useBoardStore(s => s.teamProjetoIntegracao || '')
   const members = useMemo(
     () => boardMembers.filter(m => m.email && (!m.team || !currentTeam || m.team === currentTeam)),
     [boardMembers, currentTeam]
@@ -385,7 +386,7 @@ export default function EntregaTecnicaCreator() {
           </div>
           <div>
             <LBL>Projeto Integração</LBL>
-            <input value={useBoardStore(s => s.teamProjetoIntegracao || '')} readOnly style={{ fontSize: 12, background: 'var(--surface2)', cursor: 'default' }} />
+            <input value={teamProjetoIntegracao} readOnly style={{ fontSize: 12, background: 'var(--surface2)', cursor: 'default' }} />
           </div>
         </div>
 
