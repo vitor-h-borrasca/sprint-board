@@ -38,12 +38,16 @@ export function getSessionTeamAreaPath() {
   return getSession()?.teamAreaPath || null
 }
 
-export function saveSessionTeam(teamName, teamAreaPath = '') {
+export function getSessionTeamProjetoIntegracao() {
+  return getSession()?.teamProjetoIntegracao || null
+}
+
+export function saveSessionTeam(teamName, teamAreaPath = '', teamProjetoIntegracao = '') {
   try {
     const raw = localStorage.getItem(SESSION_KEY)
     if (!raw) return
     const session = JSON.parse(raw)
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, team: teamName, teamAreaPath }))
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, team: teamName, teamAreaPath, teamProjetoIntegracao }))
   } catch { /* noop */ }
 }
 

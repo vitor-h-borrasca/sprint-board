@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { loadBoardData, saveBoardData, getBoardDefault, getScriptUrl, setScriptUrl as persistScriptUrl, makeSprint, makePetSlot, getSizeHrs, getActiveSprint, getActivePet } from '@/domain/board'
 import { cloudSave, cloudLoad } from '@/domain/sync'
 import { genId } from '@/domain/utils'
-import { getSessionTeam, getSessionTeamAreaPath } from '@/domain/auth'
+import { getSessionTeam, getSessionTeamAreaPath, getSessionTeamProjetoIntegracao } from '@/domain/auth'
 
 /**
  * Store central. Regra: mutations sempre chamam _persist() no final.
@@ -33,6 +33,7 @@ const useBoardStore = create((set, get) => ({
   // ── State ──────────────────────────────────────────────────────────────────
   team: getSessionTeam(),
   teamAreaPath: getSessionTeamAreaPath() || '',
+  teamProjetoIntegracao: getSessionTeamProjetoIntegracao() || '',
   board: loadBoardData(getSessionTeam()),
   scriptUrl: getScriptUrl(),
   syncStatus: 'idle',   // idle | loading | saving | saved | nofile | error
@@ -40,10 +41,10 @@ const useBoardStore = create((set, get) => ({
   pendingSprintCreate: null, // { oldestSlot, incompleteTasks } — aguarda confirmação
 
   // ── Init por time ──────────────────────────────────────────────────────────
-  initTeam(teamName, teamAreaPath) {
+  initTeam(teamName, teamAreaPath, teamProjetoIntegracao) {
     if (get().team === teamName && get().teamAreaPath === (teamAreaPath || '')) return
     const board = loadBoardData(teamName)
-    set({ team: teamName, teamAreaPath: teamAreaPath || '', board, syncStatus: 'idle' })
+    set({ team: teamName, teamAreaPath: teamAreaPath || '', teamProjetoIntegracao: teamProjetoIntegracao || '', board, syncStatus: 'idle' })
   },
 
   resetTeamBoard() {

@@ -197,9 +197,9 @@ function handleGetTeams() {
   const data = sheet.getDataRange().getValues()
   const teams = []
   for (let i = 1; i < data.length; i++) {
-    const [name, areaPath, active] = data[i]
-    if (name && active !== false) {
-      teams.push({ name: String(name).trim(), areaPath: String(areaPath || '').trim() })
+    const [name, areaPath, projetoIntegracao] = data[i]
+    if (name) {
+      teams.push({ name: String(name).trim(), areaPath: String(areaPath || '').trim(), projetoIntegracao: String(projetoIntegracao || '').trim() })
     }
   }
   return jsonResponse({ ok: true, teams })

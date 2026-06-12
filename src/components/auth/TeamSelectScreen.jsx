@@ -21,7 +21,7 @@ export default function TeamSelectScreen({ onSelect }) {
     e.preventDefault()
     const team = teams.find((t) => t.name === selected)
     if (!team) return
-    onSelect(team.name, team.areaPath || '')
+    onSelect(team.name, team.areaPath || '', team.projetoIntegracao || '')
   }
 
   return (

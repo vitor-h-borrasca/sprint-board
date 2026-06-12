@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getSession, clearSession, getSessionTeam, getSessionTeamAreaPath, saveSessionTeam } from '@/domain/auth'
+import { getSession, clearSession, getSessionTeam, getSessionTeamAreaPath, getSessionTeamProjetoIntegracao, saveSessionTeam } from '@/domain/auth'
 import LoginScreen from '@/components/auth/LoginScreen'
 import TeamSelectScreen from '@/components/auth/TeamSelectScreen'
 import useBoardStore from '@/store/useBoardStore'
@@ -24,6 +24,7 @@ export default function App() {
   const [session, setSession]         = useState(() => getSession())
   const [team, setTeam]               = useState(() => getSessionTeam())
   const [teamAreaPath, setTeamAreaPath] = useState(() => getSessionTeamAreaPath())
+  const [teamProjetoIntegracao, setTeamProjetoIntegracao] = useState(() => getSessionTeamProjetoIntegracao())
 
   if (!session) {
     return <LoginScreen onLogin={() => setSession(getSession())} />
@@ -31,10 +32,11 @@ export default function App() {
 
   if (!team) {
     return (
-      <TeamSelectScreen onSelect={(teamName, areaPath) => {
-        saveSessionTeam(teamName, areaPath)
+      <TeamSelectScreen onSelect={(teamName, areaPath, projetoIntegracao) => {
+        saveSessionTeam(teamName, areaPath, projetoIntegracao)
         setTeam(teamName)
         setTeamAreaPath(areaPath)
+        setTeamProjetoIntegracao(projetoIntegracao)
       }} />
     )
   }
@@ -43,19 +45,20 @@ export default function App() {
     <AppContent
       team={team}
       teamAreaPath={teamAreaPath}
-      onLogout={() => { clearSession(); setSession(null); setTeam(null); setTeamAreaPath(null) }}
-      onSwitchTeam={() => { saveSessionTeam('', ''); setTeam(null); setTeamAreaPath(null) }}
+      teamProjetoIntegracao={teamProjetoIntegracao}
+      onLogout={() => { clearSession(); setSession(null); setTeam(null); setTeamAreaPath(null); setTeamProjetoIntegracao(null) }}
+      onSwitchTeam={() => { saveSessionTeam('', '', ''); setTeam(null); setTeamAreaPath(null); setTeamProjetoIntegracao(null) }}
     />
   )
 }
 
-function AppContent({ team, teamAreaPath, onLogout, onSwitchTeam }) {
+function AppContent({ team, teamAreaPath, teamProjetoIntegracao, onLogout, onSwitchTeam }) {
   const store      = useBoardStore()
   const board      = useBoardStore((s) => s.board)
 
   // Garante que o store carregue os dados do time correto ao montar
   useEffect(() => {
-    store.initTeam(team, teamAreaPath)
+    store.initTeam(team, teamAreaPath, teamProjetoIntegracao)
   }, [team])
   const syncStatus = useBoardStore((s) => s.syncStatus)
   const lastCloud  = useBoardStore((s) => s.lastCloud)

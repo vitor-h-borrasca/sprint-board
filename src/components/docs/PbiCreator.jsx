@@ -528,19 +528,25 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
           )}
         </div>
 
-        {/* Responsável */}
-        <div style={{ marginBottom: 14 }}>
-          <LBL>Responsável <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(Assigned To)</span></LBL>
-          {members.length > 0 ? (
-            <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)} style={{ fontSize: 12, maxWidth: 340 }}>
-              <option value="">— sem atribuição —</option>
-              {members.map(m => <option key={m.email} value={m.email}>{m.name}</option>)}
-            </select>
-          ) : (
-            <input value={assignedTo} onChange={e => setAssignedTo(e.target.value)}
-              placeholder="email@empresa.com (ou cadastre membros em Configuração)"
-              style={{ maxWidth: 400, fontSize: 12 }} />
-          )}
+        {/* Responsável + Projeto Integração */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14, maxWidth: 600 }}>
+          <div>
+            <LBL>Responsável <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(Assigned To)</span></LBL>
+            {members.length > 0 ? (
+              <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)} style={{ fontSize: 12 }}>
+                <option value="">— sem atribuição —</option>
+                {members.map(m => <option key={m.email} value={m.email}>{m.name}</option>)}
+              </select>
+            ) : (
+              <input value={assignedTo} onChange={e => setAssignedTo(e.target.value)}
+                placeholder="email@empresa.com"
+                style={{ fontSize: 12 }} />
+            )}
+          </div>
+          <div>
+            <LBL>Projeto Integração</LBL>
+            <input value={useBoardStore(s => s.teamProjetoIntegracao || '')} readOnly style={{ fontSize: 12, background: 'var(--surface2)', cursor: 'default' }} />
+          </div>
         </div>
 
         {/* Template */}
