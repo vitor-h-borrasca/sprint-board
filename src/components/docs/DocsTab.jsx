@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import PbiCreator from './PbiCreator'
 import EntregaTecnicaCreator from './EntregaTecnicaCreator'
+import BugHomCreator from './BugHomCreator'
 
 const TABS = [
   { k: 'feature',         icon: 'ti-stack-2',       label: 'Feature'         },
   { k: 'pbi',             icon: 'ti-layout-kanban', label: 'PBI'             },
   { k: 'entrega_tecnica', icon: 'ti-code',          label: 'Entrega Técnica' },
+  { k: 'bug_hom',         icon: 'ti-bug',           label: 'Bug Hom'         },
 ]
 
 export function DocsTab() {
@@ -35,6 +37,7 @@ export function DocsTab() {
       {tab === 'pbi'             && <PbiCreator defaultType="pbi" />}
       {tab === 'feature'         && <PbiCreator defaultType="feature" />}
       {tab === 'entrega_tecnica' && <EntregaTecnicaCreator />}
+      {tab === 'bug_hom'         && <BugHomCreator />}
 
     </div>
   )
