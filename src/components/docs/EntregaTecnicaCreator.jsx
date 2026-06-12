@@ -215,6 +215,7 @@ export default function EntregaTecnicaCreator() {
   const [tipo, setTipo]             = useState('Melhoria Técnica')
   const [state, setState]           = useState('Em Análise')
   const [assignedTo, setAssignedTo] = useState('')
+  const [entregaDeValor, setEntregaDeValor] = useState('SIM')
   const [parentId, setParentId]     = useState('')
   const [workItemId, setWorkItemId] = useState('')
   const [files, setFiles]           = useState([])
@@ -270,6 +271,7 @@ export default function EntregaTecnicaCreator() {
       let fields = [
         { path: '/fields/System.Title', value: review.title || files[0]?.name.replace('.md', '') },
         { path: '/fields/System.State', value: state },
+        { path: '/fields/Custom.ENTREGA_DE_VALOR', value: entregaDeValor },
         ...(assignedTo ? [{ path: '/fields/System.AssignedTo', value: assignedTo }] : []),
         ...FIELD_MAP.map(({ section, path, html }) => {
           let raw = review.sections[section] || ''
@@ -373,6 +375,19 @@ export default function EntregaTecnicaCreator() {
             <select value={state} onChange={e => setState(e.target.value)} style={{ fontSize: 12 }}>
               {STATES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
+          </div>
+        </div>
+
+        {/* Entrega de Valor */}
+        <div style={{ marginBottom: 14 }}>
+          <LBL>Entrega de Valor</LBL>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => setEntregaDeValor('SIM')} className={entregaDeValor === 'SIM' ? 'primary' : ''} style={{ fontSize: 12 }}>
+              Sim
+            </button>
+            <button onClick={() => setEntregaDeValor('NÃO')} className={entregaDeValor === 'NÃO' ? 'primary' : ''} style={{ fontSize: 12 }}>
+              Não
+            </button>
           </div>
         </div>
 

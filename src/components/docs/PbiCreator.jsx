@@ -321,6 +321,7 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
   const [state, setState]               = useState('Em Análise')
   const [assignedTo, setAssignedTo]     = useState('')
   const [classificacao, setClassificacao] = useState('Negócio') // feature only
+  const [entregaDeValor, setEntregaDeValor] = useState('SIM')
   const [parentId, setParentId]         = useState('')
   const [workItemId, setWorkItemId]     = useState('')
   const [files, setFiles]               = useState([])
@@ -391,6 +392,7 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
             { op: 'add', path: '/fields/System.IterationPath',value: area },
             { op: 'add', path: '/fields/Custom.ANY_Pais',     value: 'Brasil' },
             { op: 'add', path: '/fields/Custom.79a46532-b84a-4cac-8bf8-48dabf09c76c', value: 'Negócio' },
+            { op: 'add', path: '/fields/Custom.ENTREGA_DE_VALOR', value: entregaDeValor },
             ...(assignedTo ? [{ op: 'add', path: '/fields/System.AssignedTo', value: assignedTo }] : []),
           ]
         } else {
@@ -407,6 +409,7 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
             { op: 'add', path: '/fields/Custom.79a46532-b84a-4cac-8bf8-48dabf09c76c', value: classificacao },
             { op: 'add', path: '/fields/Custom.ANY_Valor_Avaliador', value: 'Interno' },
             { op: 'add', path: '/fields/Custom.ANY_IMPACTA_API',     value: 'Não Impacta' },
+            { op: 'add', path: '/fields/Custom.ENTREGA_DE_VALOR', value: entregaDeValor },
             ...(assignedTo ? [{ op: 'add', path: '/fields/System.AssignedTo', value: assignedTo }] : []),
           ]
         }
@@ -539,6 +542,19 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
               </select>
             </div>
           )}
+        </div>
+
+        {/* Entrega de Valor */}
+        <div style={{ marginBottom: 14 }}>
+          <LBL>Entrega de Valor</LBL>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => setEntregaDeValor('SIM')} className={entregaDeValor === 'SIM' ? 'primary' : ''} style={{ fontSize: 12 }}>
+              Sim
+            </button>
+            <button onClick={() => setEntregaDeValor('NÃO')} className={entregaDeValor === 'NÃO' ? 'primary' : ''} style={{ fontSize: 12 }}>
+              Não
+            </button>
+          </div>
         </div>
 
         {/* Responsável + Projeto Integração */}
