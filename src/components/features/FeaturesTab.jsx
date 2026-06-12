@@ -201,7 +201,13 @@ function FeatureRow({ feature, linkedTasks, allTasks, azureConfig, azureReady, o
           newTasks.push({ id: genId(), createdAt: Date.now(), ...mapPbiToTask(wi, feature.id) })
         } else {
           if (existing.featureId !== feature.id) toLink.push(existing)
-          if (areaPath && existing.areaPath !== areaPath) onPatchTask(existing.id, { areaPath })
+          const patch = {}
+          const title = wi.fields?.['System.Title'] || ''
+          const state = wi.fields?.['System.State'] || ''
+          if (title && existing.title !== title) patch.title = title
+          if (state && existing.azureState !== state) patch.azureState = state
+          if (areaPath && existing.areaPath !== areaPath) patch.areaPath = areaPath
+          if (Object.keys(patch).length > 0) onPatchTask(existing.id, patch)
         }
       }
 
