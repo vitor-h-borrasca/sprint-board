@@ -18,7 +18,7 @@ export function filterByAreaPath(tasks, teamAreaPath) {
   return tasks.filter((t) => {
     if (!t.areaPath) return true
     const tp = t.areaPath.toLowerCase()
-    return tp === ap || tp.startsWith(ap + '\\')
+    return tp === ap || tp.startsWith(ap + '\\') || ap.startsWith(tp + '\\')
   })
 }
 
