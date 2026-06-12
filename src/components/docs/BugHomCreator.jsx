@@ -8,7 +8,14 @@ import { fetchTeams } from '@/domain/auth'
 const PRIORIDADE_OPTS  = ['1 - Crítico', '2 - Alto', '3 - Médio', '4 - Baixo']
 const TECNICO_OPTS     = ['NÃO', 'SIM']
 const MARKETPLACE_OPTS = ['Shopee', 'TikTok', 'Shein', 'Dafiti', 'AliExpress', 'TEMU']
-const DOMINIO_OPTS     = ['Configurações', 'Pedido', 'Catálogo', 'Estoque', 'Frete', 'Transmissão', 'Preço']
+const DOMINIO_OPTS     = ['Configurações', 'Pedido', 'Catálogo', 'Estoque', 'Frete', 'Transmissão', 'Preço', 'Monitoramento', 'Menu']
+
+const DOMINIO_SUBS = {
+  'Pedido':   { field: 'Custom.DominioPedido_Any',   opts: ['Importaçao de Pedido', 'Atualizaçao de Pedido', 'Etiquetas', 'Auditoria', 'Consulta/Busca/Filtro/Resultados'] },
+  'Catálogo': { field: 'Custom.DominioCatalogo_Any', opts: ['Marca', 'Atributos', 'Categoria'] },
+  'Estoque':  { field: 'Custom.DominioEstoque_Any',  opts: ['Gestão de Estoque'] },
+  'Frete':    { field: 'Custom.DominioFrete_Any',    opts: [] },
+}
 const ORIGEM_HOT_OPTS  = ['Homologador', 'Automation', 'Desenvolvedor']
 const CAUSA_RAIZ_OPTS  = ['Falha de codificação - Backend', 'Falha de codificação - Frontend', 'Regra de negócio', 'Infraestrutura', 'Outros']
 
@@ -242,8 +249,17 @@ export default function BugHomCreator() {
   const [tecnicoPerf, setTecnicoPerf] = useState('NÃO')
   const [marketplace, setMarketplace] = useState(MARKETPLACE_OPTS[0])
   const [dominio, setDominio]         = useState(DOMINIO_OPTS[0])
+  const [subDominio, setSubDominio]   = useState('')
   const [origemHom, setOrigemHom]     = useState(ORIGEM_HOT_OPTS[0])
   const [causaRaiz, setCausaRaiz]     = useState(CAUSA_RAIZ_OPTS[0])
+
+  const dominioSub = DOMINIO_SUBS[dominio] || null
+
+  function handleDominioChange(val) {
+    setDominio(val)
+    const sub = DOMINIO_SUBS[val]
+    setSubDominio(sub?.opts?.[0] || '')
+  }
 
   function downloadTemplate() {
     const blob = new Blob([BUG_HOM_TEMPLATE], { type: 'text/markdown;charset=utf-8' })
@@ -301,6 +317,7 @@ export default function BugHomCreator() {
         { op: 'add', path: '/fields/Custom.ANY_TECNICO_PERFORMANCE_ESTABILIDADE',  value: tecnicoPerf },
         { op: 'add', path: '/fields/Custom.08289694-b2cc-4329-bd08-1481b39afa8f',  value: marketplace },
         { op: 'add', path: '/fields/Custom.Dominio_Any',                           value: dominio },
+        ...(dominioSub && subDominio ? [{ op: 'add', path: '/fields/' + dominioSub.field, value: subDominio }] : []),
         { op: 'add', path: '/fields/Custom.c275abe4-37d0-475c-8bdf-ed551c63b585', value: origemHom },
         { op: 'add', path: '/fields/Custom.Causadoproblema',                       value: causaRaiz },
         { op: 'add', path: '/fields/Custom.Origemdeentrada',                       value: 'Engenharia' },
@@ -441,10 +458,22 @@ export default function BugHomCreator() {
           </div>
           <div>
             <LBL>Domínio</LBL>
-            <select value={dominio} onChange={e => setDominio(e.target.value)} style={{ fontSize: 12 }}>
+            <select value={dominio} onChange={e => handleDominioChange(e.target.value)} style={{ fontSize: 12 }}>
               {DOMINIO_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
+          {dominioSub && (
+            <div>
+              <LBL>Sub-domínio <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>({dominio})</span></LBL>
+              {dominioSub.opts.length > 0 ? (
+                <select value={subDominio} onChange={e => setSubDominio(e.target.value)} style={{ fontSize: 12 }}>
+                  {dominioSub.opts.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ) : (
+                <input value={subDominio} onChange={e => setSubDominio(e.target.value)} placeholder="Sub-domínio" style={{ fontSize: 12 }} />
+              )}
+            </div>
+          )}
           <div>
             <LBL>Origem na homologação</LBL>
             <select value={origemHom} onChange={e => setOrigemHom(e.target.value)} style={{ fontSize: 12 }}>
