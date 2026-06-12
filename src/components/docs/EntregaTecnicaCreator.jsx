@@ -378,21 +378,15 @@ export default function EntregaTecnicaCreator() {
           </div>
         </div>
 
-        {/* Entrega de Valor */}
-        <div style={{ marginBottom: 14 }}>
-          <LBL>Entrega de Valor</LBL>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => setEntregaDeValor('SIM')} className={entregaDeValor === 'SIM' ? 'primary' : ''} style={{ fontSize: 12 }}>
-              Sim
-            </button>
-            <button onClick={() => setEntregaDeValor('NÃO')} className={entregaDeValor === 'NÃO' ? 'primary' : ''} style={{ fontSize: 12 }}>
-              Não
-            </button>
+        {/* Entrega de Valor + Responsável */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+          <div>
+            <LBL>Entrega de Valor</LBL>
+            <select value={entregaDeValor} onChange={e => setEntregaDeValor(e.target.value)} style={{ fontSize: 12 }}>
+              <option value="SIM">SIM</option>
+              <option value="NÃO">NÃO</option>
+            </select>
           </div>
-        </div>
-
-        {/* Responsável + Projeto Integração */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14, maxWidth: 600 }}>
           <div>
             <LBL>Responsável <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(Assigned To)</span></LBL>
             {members.length > 0 ? (
@@ -411,13 +405,15 @@ export default function EntregaTecnicaCreator() {
               />
             )}
           </div>
-          <div>
-            <LBL>Projeto Integração</LBL>
-            <select value={projetoIntegracao} onChange={e => setProjetoIntegracao(e.target.value)} style={{ fontSize: 12 }}>
-              {projetoIntegracaoOpts.length === 0 && <option value="">— carregando —</option>}
-              {projetoIntegracaoOpts.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
+        </div>
+
+        {/* Projeto Integração */}
+        <div style={{ marginBottom: 14 }}>
+          <LBL>Projeto Integração</LBL>
+          <select value={projetoIntegracao} onChange={e => setProjetoIntegracao(e.target.value)} style={{ fontSize: 12 }}>
+            {projetoIntegracaoOpts.length === 0 && <option value="">— carregando —</option>}
+            {projetoIntegracaoOpts.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
         </div>
 
         {/* Template */}

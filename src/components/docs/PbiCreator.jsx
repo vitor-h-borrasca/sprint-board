@@ -526,39 +526,35 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
           )}
         </div>
 
-        {/* State + Classificação (feature) */}
-        <div style={{ display: 'grid', gridTemplateColumns: workItemType === 'feature' && mode === 'criar' ? '1fr 1fr' : '1fr', gap: 12, marginBottom: 14, maxWidth: 480 }}>
+        {/* State + Entrega de Valor */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
           <div>
             <LBL>State</LBL>
             <select value={state} onChange={e => setState(e.target.value)} style={{ fontSize: 12 }}>
               {states.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          {workItemType === 'feature' && mode === 'criar' && (
-            <div>
-              <LBL>Classificação</LBL>
-              <select value={classificacao} onChange={e => setClassificacao(e.target.value)} style={{ fontSize: 12 }}>
-                {CLASSIFICACOES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          )}
-        </div>
-
-        {/* Entrega de Valor */}
-        <div style={{ marginBottom: 14 }}>
-          <LBL>Entrega de Valor</LBL>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => setEntregaDeValor('SIM')} className={entregaDeValor === 'SIM' ? 'primary' : ''} style={{ fontSize: 12 }}>
-              Sim
-            </button>
-            <button onClick={() => setEntregaDeValor('NÃO')} className={entregaDeValor === 'NÃO' ? 'primary' : ''} style={{ fontSize: 12 }}>
-              Não
-            </button>
+          <div>
+            <LBL>Entrega de Valor</LBL>
+            <select value={entregaDeValor} onChange={e => setEntregaDeValor(e.target.value)} style={{ fontSize: 12 }}>
+              <option value="SIM">SIM</option>
+              <option value="NÃO">NÃO</option>
+            </select>
           </div>
         </div>
 
+        {/* Classificação (feature + criar only) */}
+        {workItemType === 'feature' && mode === 'criar' && (
+          <div style={{ marginBottom: 14 }}>
+            <LBL>Classificação</LBL>
+            <select value={classificacao} onChange={e => setClassificacao(e.target.value)} style={{ fontSize: 12 }}>
+              {CLASSIFICACOES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        )}
+
         {/* Responsável + Projeto Integração */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14, maxWidth: 600 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
           <div>
             <LBL>Responsável <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(Assigned To)</span></LBL>
             {members.length > 0 ? (
