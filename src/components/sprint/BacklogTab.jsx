@@ -52,7 +52,10 @@ export default function BacklogTab() {
   const [groupByFeature, setGroupByFeature] = useState(false)
 
   const shown = allTasksFlat.filter((t) => {
-    if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false
+    if (search) {
+      const q = search.toLowerCase()
+      if (!t.title.toLowerCase().includes(q) && !String(t.code || '').includes(q)) return false
+    }
     if (filterTab === 'backlog') return !t.sprintId
     if (filterTab === 'active')  return t.sprintId === activeSprintId
     if (filterTab === 'sprints') return !!t.sprintId
