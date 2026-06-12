@@ -90,12 +90,21 @@ function stripHtml(html = '') {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+const AZURE_TYPE_MAP = {
+  'Product Backlog Item': 'pbi',
+  'Bug':                 'bughom',
+  'Entrega Técnica':     'entrega_tecnica',
+  'Task':                'tecnica',
+}
+
 export function mapPbiToTask(wi, featureId) {
   const f = wi.fields || {}
+  const azureType = f['System.WorkItemType'] || ''
+  const type = AZURE_TYPE_MAP[azureType] || 'pbi'
   return {
     code: String(wi.id),
     title: f['System.Title'] || '',
-    type: 'pbi',
+    type,
     size: 'M',
     priority: 2,
     description: stripHtml(f['System.Description'] || ''),
