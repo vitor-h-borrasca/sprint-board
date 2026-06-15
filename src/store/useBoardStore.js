@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { loadBoardData, saveBoardData, getBoardDefault, getScriptUrl, setScriptUrl as persistScriptUrl, makeSprint, makePetSlot, getSizeHrs, getActiveSprint, getActivePet } from '@/domain/board'
-import { cloudSave, cloudLoad } from '@/domain/sync'
+import { cloudSave, cloudLoad, cloudSavePet } from '@/domain/sync'
 import { genId } from '@/domain/utils'
 import { getSessionTeam, getSessionTeamAreaPath, getSessionTeamProjetoIntegracao } from '@/domain/auth'
 
@@ -63,6 +63,13 @@ const useBoardStore = create((set, get) => ({
     cloudSave(board, active?.sprint?.name || '', url)
       .then(() => set({ syncStatus: 'saved', lastCloud: new Date() }))
       .catch(() => set({ syncStatus: 'error' }))
+  },
+
+  _persistPet(board) {
+    const url = get().scriptUrl
+    const team = get().team
+    if (!url || !team) return
+    cloudSavePet(board, team, url).catch(() => {})
   },
 
   // ── Selectors (computed) ───────────────────────────────────────────────────
@@ -239,7 +246,9 @@ const useBoardStore = create((set, get) => ({
       const quarterConfigs = { ...(s.pet.quarterConfigs || {}), [quarter]: cfg }
       return { ...s, pet: { ...s.pet, quarterConfigs } }
     })
-    get()._setBoard({ ...board, pets })
+    const newBoard = { ...board, pets }
+    get()._setBoard(newBoard)
+    get()._persistPet(newBoard)
   },
 
   // ── Initiatives CRUD ───────────────────────────────────────────────────────
@@ -253,7 +262,9 @@ const useBoardStore = create((set, get) => ({
         : [...s.initiatives, { id: genId(), createdAt: Date.now(), ...initiative }]
       return { ...s, initiatives }
     })
-    get()._setBoard({ ...board, pets })
+    const newBoard = { ...board, pets }
+    get()._setBoard(newBoard)
+    get()._persistPet(newBoard)
   },
 
   deleteInitiative(id) {
@@ -262,7 +273,9 @@ const useBoardStore = create((set, get) => ({
       ? { ...s, initiatives: s.initiatives.filter((i) => i.id !== id) }
       : s
     )
-    get()._setBoard({ ...board, pets })
+    const newBoard = { ...board, pets }
+    get()._setBoard(newBoard)
+    get()._persistPet(newBoard)
   },
 
   patchInitiative(id, patch) {
@@ -271,7 +284,9 @@ const useBoardStore = create((set, get) => ({
       ? { ...s, initiatives: s.initiatives.map((i) => i.id === id ? { ...i, ...patch } : i) }
       : s
     )
-    get()._setBoard({ ...board, pets })
+    const newBoard = { ...board, pets }
+    get()._setBoard(newBoard)
+    get()._persistPet(newBoard)
   },
 
   // ── Members ────────────────────────────────────────────────────────────────

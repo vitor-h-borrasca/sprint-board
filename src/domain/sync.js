@@ -1,5 +1,41 @@
 import { migrateData } from './board'
 
+export async function cloudSavePet(board, team, url) {
+  if (!url) throw new Error('URL não configurada')
+  const activePet = (board.pets || []).find((s) => s.id === board.activePetId) || (board.pets || [])[0]
+  if (!activePet) return
+
+  const initiatives = activePet.initiatives || []
+  const quarterConfigs = activePet.pet?.quarterConfigs || {}
+  const sizeHrs = activePet.pet?.sizeHrs || {}
+
+  const rows = initiatives.map((i) => ({
+    quarter: i.quarter || '',
+    title: i.title || '',
+    tag: i.tag || '',
+    size: i.size || '',
+    hrs: sizeHrs[i.size] || 0,
+    status: i.status || 'notstarted',
+    prioritized: i.prioritized !== false,
+    isInitiative: i.isInitiative !== false,
+  }))
+
+  const configs = Object.entries(quarterConfigs).map(([q, c]) => ({
+    quarter: q,
+    startDate: c.startDate || '',
+    endDate: c.endDate || '',
+    workingDays: c.workingDays ?? 60,
+    generalAbsences: JSON.stringify(c.generalAbsences || []),
+    memberAbsences: JSON.stringify(c.memberAbsences || {}),
+  }))
+
+  await fetch(url, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: JSON.stringify({ action: 'save_pet', team, rows, configs }),
+  })
+}
+
 export async function cloudSave(boardData, name, url) {
   if (!url) throw new Error('URL não configurada')
   await fetch(url, {
