@@ -5,7 +5,7 @@ import { QUARTERS, QUARTER_COLORS } from '@/domain/constants'
 import { Badge } from '@/components/shared'
 import { InitiativeForm } from './InitiativeForm'
 import { InitiativeCard } from './InitiativeCard'
-import { PETOverview } from './PETOverview'
+import { PETOverview, QuarterConfigModal } from './PETOverview'
 import { fmtHrs } from '@/domain/utils'
 
 export function PETTab() {
@@ -20,6 +20,7 @@ export function PETTab() {
   } = usePET()
 
   const [view, setView] = useState('lista')
+  const [configQ, setConfigQ] = useState(null) // quarter sendo configurado ex: 'Q3'
   const [filterQ, setFilterQ]         = useState('all')
   const [filterTag, setFilterTag]     = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
@@ -69,10 +70,19 @@ export function PETTab() {
           const pct = total > 0 ? Math.round(done / total * 100) : 0
           return (
             <div key={q} onClick={() => setFilterQ(filterQ === q ? 'all' : q)}
-              style={{ background: filterQ === q ? qc.bg : 'var(--surface)', border: '1px solid ' + (filterQ === q ? qc.bd : 'var(--border)'), borderRadius: 'var(--radius-lg)', padding: '14px 16px', cursor: 'pointer', transition: 'all .15s' }}>
+              style={{ background: filterQ === q ? qc.bg : 'var(--surface)', border: '1px solid ' + (filterQ === q ? qc.bd : 'var(--border)'), borderRadius: 'var(--radius-lg)', padding: '14px 16px', cursor: 'pointer', transition: 'all .15s', position: 'relative' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Badge bg={qc.bg} bd={qc.bd} tx={qc.tx} style={{ fontWeight: 700, fontSize: 12 }}>{q}</Badge>
-                {late > 0 && <Badge bg="var(--red-bg)" bd="var(--red-bd)" tx="var(--red-tx)" style={{ fontSize: 10 }}>{late} atrasada{late > 1 ? 's' : ''}</Badge>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {late > 0 && <Badge bg="var(--red-bg)" bd="var(--red-bd)" tx="var(--red-tx)" style={{ fontSize: 10 }}>{late} atrasada{late > 1 ? 's' : ''}</Badge>}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfigQ(q) }}
+                    title="Configurar quarter"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: '2px 4px', borderRadius: 4, lineHeight: 1, display: 'flex', alignItems: 'center' }}
+                  >
+                    <i className="ti ti-dots-vertical" style={{ fontSize: 14 }} />
+                  </button>
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: qc.tx }}>{total}</div>
@@ -89,6 +99,18 @@ export function PETTab() {
             </div>
           )
         })}
+        {configQ && (() => {
+          const qc = QUARTER_COLORS[configQ]
+          const petSlot = (store.board.pets || []).find((p) => p.pet?.quarter === configQ) || null
+          return (
+            <QuarterConfigModal
+              petSlot={petSlot}
+              quarter={configQ}
+              qc={qc}
+              onClose={() => setConfigQ(null)}
+            />
+          )
+        })()}
       </div>
 
       {/* Filtros */}

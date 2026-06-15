@@ -36,7 +36,7 @@ function DonutChart({ pct, color, size = 60 }) {
   )
 }
 
-function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
+export function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
   const store = useBoardStore()
   const cfg = petSlot?.pet || {}
   const [form, setForm] = useState({
