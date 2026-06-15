@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { QUARTERS, QUARTER_COLORS, PET_STATUSES } from '@/domain/constants'
 import { Badge } from '@/components/shared'
 import { quarterStats } from '@/domain/initiatives'
+import useBoardStore from '@/store/useBoardStore'
 
 const STATUS_COLS = [
   { key: 'notstarted',   label: 'NÃO INICIADO',  icon: 'ti-circle' },
@@ -35,11 +36,197 @@ function DonutChart({ pct, color, size = 60 }) {
   )
 }
 
-function QuarterCard({ stat, selected, onClick }) {
+function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
+  const store = useBoardStore()
+  const cfg = petSlot?.pet || {}
+  const [form, setForm] = useState({
+    startDate: cfg.startDate || '',
+    endDate: cfg.endDate || '',
+    workingDays: cfg.workingDays ?? 60,
+    generalAbsences: cfg.generalAbsences || [],
+  })
+  const [newAbsence, setNewAbsence] = useState({ startDate: '', endDate: '', reason: '' })
+  const modalRef = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (modalRef.current && !modalRef.current.contains(e.target)) onClose()
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [onClose])
+
+  function save() {
+    if (!petSlot) return
+    store.updatePetCfgById(petSlot.id, form)
+    onClose()
+  }
+
+  function addAbsence() {
+    if (!newAbsence.startDate) return
+    setForm((f) => ({
+      ...f,
+      generalAbsences: [...f.generalAbsences, { ...newAbsence, id: Date.now().toString() }],
+    }))
+    setNewAbsence({ startDate: '', endDate: '', reason: '' })
+  }
+
+  function removeAbsence(id) {
+    setForm((f) => ({ ...f, generalAbsences: f.generalAbsences.filter((a) => a.id !== id) }))
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(0,0,0,0.3)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div ref={modalRef} style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: 24,
+        width: 480,
+        maxWidth: '95vw',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Badge bg={qc.bg} bd={qc.bd} tx={qc.tx} style={{ fontWeight: 700, fontSize: 13 }}>{quarter}</Badge>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Configuração do Quarter</span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}>
+            <i className="ti ti-x" style={{ fontSize: 16 }} />
+          </button>
+        </div>
+
+        {/* Datas */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Período</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 11, color: 'var(--text2)' }}>Início</span>
+              <input
+                type="date"
+                value={form.startDate}
+                onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+                style={{ width: '100%', fontSize: 12 }}
+              />
+            </label>
+            <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 11, color: 'var(--text2)' }}>Fim</span>
+              <input
+                type="date"
+                value={form.endDate}
+                onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+                style={{ width: '100%', fontSize: 12 }}
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Dias úteis */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dias úteis no quarter</span>
+            <input
+              type="number"
+              min={1}
+              max={90}
+              value={form.workingDays}
+              onChange={(e) => setForm((f) => ({ ...f, workingDays: Number(e.target.value) }))}
+              style={{ width: 100, fontSize: 12 }}
+            />
+          </label>
+        </div>
+
+        {/* Ausências gerais */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+            Ausências / Feriados do quarter
+          </div>
+
+          {/* Lista de ausências */}
+          {form.generalAbsences.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+              {form.generalAbsences.map((a) => (
+                <div key={a.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: 'var(--surface2)', borderRadius: 'var(--radius)',
+                  padding: '6px 10px', fontSize: 12,
+                }}>
+                  <i className="ti ti-calendar-off" style={{ fontSize: 12, color: 'var(--text3)' }} />
+                  <span style={{ flex: 1, color: 'var(--text2)' }}>
+                    {a.startDate}{a.endDate && a.endDate !== a.startDate ? ` → ${a.endDate}` : ''}
+                    {a.reason ? <span style={{ color: 'var(--text3)', marginLeft: 6 }}>· {a.reason}</span> : null}
+                  </span>
+                  <button
+                    onClick={() => removeAbsence(a.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 2 }}
+                  >
+                    <i className="ti ti-x" style={{ fontSize: 11 }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Adicionar ausência */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 10, color: 'var(--text3)' }}>De</span>
+              <input
+                type="date"
+                value={newAbsence.startDate}
+                onChange={(e) => setNewAbsence((a) => ({ ...a, startDate: e.target.value }))}
+                style={{ fontSize: 11, padding: '4px 6px' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 10, color: 'var(--text3)' }}>Até</span>
+              <input
+                type="date"
+                value={newAbsence.endDate}
+                onChange={(e) => setNewAbsence((a) => ({ ...a, endDate: e.target.value }))}
+                style={{ fontSize: 11, padding: '4px 6px' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 100 }}>
+              <span style={{ fontSize: 10, color: 'var(--text3)' }}>Motivo (opcional)</span>
+              <input
+                type="text"
+                placeholder="ex: Feriado"
+                value={newAbsence.reason}
+                onChange={(e) => setNewAbsence((a) => ({ ...a, reason: e.target.value }))}
+                style={{ fontSize: 11, padding: '4px 6px' }}
+              />
+            </label>
+            <button onClick={addAbsence} style={{ fontSize: 11, padding: '5px 10px' }}>
+              <i className="ti ti-plus" style={{ fontSize: 12 }} /> Adicionar
+            </button>
+          </div>
+        </div>
+
+        {/* Ações */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ fontSize: 12 }}>Cancelar</button>
+          <button className="primary" onClick={save} style={{ fontSize: 12 }}>
+            <i className="ti ti-check" style={{ fontSize: 13 }} /> Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function QuarterCard({ stat, selected, onClick, petSlot }) {
   const qc = QUARTER_COLORS[stat.quarter]
   const pct = stat.total > 0 ? Math.round(stat.done / stat.total * 100) : 0
+  const [showConfig, setShowConfig] = useState(false)
 
-  // label do estado predominante
   const label = stat.total === 0
     ? 'Vazio'
     : stat.done === stat.total
@@ -50,59 +237,105 @@ function QuarterCard({ stat, selected, onClick }) {
           ? 'Atrasado'
           : 'Não inic.'
 
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        background: selected ? qc.bg : 'var(--surface)',
-        border: '1px solid ' + (selected ? qc.bd : 'var(--border)'),
-        borderRadius: 'var(--radius-lg)',
-        padding: '14px 16px',
-        cursor: 'pointer',
-        transition: 'all .15s',
-        outline: selected ? `2px solid ${qc.bd}` : 'none',
-        outlineOffset: 2,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-        <Badge bg={qc.bg} bd={qc.bd} tx={qc.tx} style={{ fontWeight: 700, fontSize: 12 }}>
-          {stat.quarter}
-        </Badge>
-        <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-          {stat.initiativeCount} iniciativa{stat.initiativeCount !== 1 ? 's' : ''}
-        </span>
-      </div>
+  const cfg = petSlot?.pet || {}
+  const hasConfig = cfg.startDate || cfg.endDate
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-        <div style={{ position: 'relative', width: 60, height: 60, flexShrink: 0 }}>
-          <DonutChart pct={pct} color={qc.tx} size={60} />
-          <div style={{
-            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', transform: 'none',
-          }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: qc.tx }}>{pct}%</span>
+  return (
+    <>
+      <div
+        onClick={onClick}
+        style={{
+          background: selected ? qc.bg : 'var(--surface)',
+          border: '1px solid ' + (selected ? qc.bd : 'var(--border)'),
+          borderRadius: 'var(--radius-lg)',
+          padding: '14px 16px',
+          cursor: 'pointer',
+          transition: 'all .15s',
+          outline: selected ? `2px solid ${qc.bd}` : 'none',
+          outlineOffset: 2,
+          position: 'relative',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+          <Badge bg={qc.bg} bd={qc.bd} tx={qc.tx} style={{ fontWeight: 700, fontSize: 12 }}>
+            {stat.quarter}
+          </Badge>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+              {stat.initiativeCount} iniciativa{stat.initiativeCount !== 1 ? 's' : ''}
+            </span>
+            {/* Botão três pontinhos */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowConfig(true) }}
+              title="Configurar quarter"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text3)',
+                padding: '2px 4px',
+                borderRadius: 4,
+                lineHeight: 1,
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <i className="ti ti-dots-vertical" style={{ fontSize: 14 }} />
+            </button>
           </div>
         </div>
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 500 }}>{label}</div>
-          {stat.late > 0 && (
-            <Badge bg="var(--red-bg)" bd="var(--red-bd)" tx="var(--red-tx)" style={{ fontSize: 10, marginTop: 4 }}>
-              {stat.late} atrasada{stat.late > 1 ? 's' : ''}
-            </Badge>
-          )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+          <div style={{ position: 'relative', width: 60, height: 60, flexShrink: 0 }}>
+            <DonutChart pct={pct} color={qc.tx} size={60} />
+            <div style={{
+              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', transform: 'none',
+            }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: qc.tx }}>{pct}%</span>
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 500 }}>{label}</div>
+            {stat.late > 0 && (
+              <Badge bg="var(--red-bg)" bd="var(--red-bd)" tx="var(--red-tx)" style={{ fontSize: 10, marginTop: 4 }}>
+                {stat.late} atrasada{stat.late > 1 ? 's' : ''}
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Datas configuradas */}
+        {hasConfig && (
+          <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <i className="ti ti-calendar" style={{ fontSize: 10 }} />
+            {cfg.startDate && <span>{cfg.startDate}</span>}
+            {cfg.startDate && cfg.endDate && <span>→</span>}
+            {cfg.endDate && <span>{cfg.endDate}</span>}
+            {cfg.workingDays && <span style={{ marginLeft: 4 }}>· {cfg.workingDays}d úteis</span>}
+          </div>
+        )}
+
+        {/* Barra de progresso */}
+        <div style={{ height: 4, background: 'var(--surface2)', borderRadius: 2, overflow: 'hidden', marginBottom: 4 }}>
+          <div style={{ height: '100%', width: pct + '%', background: qc.tx, borderRadius: 2, transition: 'width .4s' }} />
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--text3)' }}>{stat.done}/{stat.total} concluídas</div>
+
+        <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>
+          clique para filtrar
         </div>
       </div>
 
-      {/* Barra de progresso */}
-      <div style={{ height: 4, background: 'var(--surface2)', borderRadius: 2, overflow: 'hidden', marginBottom: 4 }}>
-        <div style={{ height: '100%', width: pct + '%', background: qc.tx, borderRadius: 2, transition: 'width .4s' }} />
-      </div>
-      <div style={{ fontSize: 10, color: 'var(--text3)' }}>{stat.done}/{stat.total} concluídas</div>
-
-      <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>
-        clique para filtrar
-      </div>
-    </div>
+      {showConfig && (
+        <QuarterConfigModal
+          petSlot={petSlot}
+          quarter={stat.quarter}
+          qc={qc}
+          onClose={() => setShowConfig(false)}
+        />
+      )}
+    </>
   )
 }
 
@@ -152,7 +385,7 @@ function InitiativeOverviewCard({ initiative, qc }) {
   )
 }
 
-export function PETOverview({ initiatives, shr }) {
+export function PETOverview({ initiatives, shr, pets = [], members = [] }) {
   const [selectedQ, setSelectedQ] = useState('all')
 
   const stats = quarterStats(initiatives, shr)
@@ -160,6 +393,10 @@ export function PETOverview({ initiatives, shr }) {
   const filtered = selectedQ === 'all'
     ? initiatives
     : initiatives.filter((i) => i.quarter === selectedQ)
+
+  function findPetSlot(quarter) {
+    return pets.find((p) => p.pet?.quarter === quarter) || null
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -172,6 +409,7 @@ export function PETOverview({ initiatives, shr }) {
             stat={stat}
             selected={selectedQ === stat.quarter}
             onClick={() => setSelectedQ(selectedQ === stat.quarter ? 'all' : stat.quarter)}
+            petSlot={findPetSlot(stat.quarter)}
           />
         ))}
       </div>

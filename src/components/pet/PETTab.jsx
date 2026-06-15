@@ -56,7 +56,7 @@ export function PETTab() {
 
       {/* PET Overview */}
       {view === 'overview' && (
-        <PETOverview initiatives={initiatives} shr={shr} />
+        <PETOverview initiatives={initiatives} shr={shr} pets={store.board.pets || []} members={members} />
       )}
 
       {/* Vista Lista */}

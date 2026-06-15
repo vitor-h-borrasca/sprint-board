@@ -226,6 +226,12 @@ const useBoardStore = create((set, get) => ({
     get()._setBoard({ ...board, pets })
   },
 
+  updatePetCfgById(id, cfg) {
+    const { board } = get()
+    const pets = (board.pets || []).map((s) => s.id === id ? { ...s, pet: { ...s.pet, ...cfg } } : s)
+    get()._setBoard({ ...board, pets })
+  },
+
   // ── Initiatives CRUD ───────────────────────────────────────────────────────
   upsertInitiative(initiative) {
     const { board } = get()
