@@ -325,11 +325,15 @@ export function QuarterConfigModal({ quarter, qc, onClose }) {
 }
 
 function calcCapacity(members, workingDays) {
-  if (!members || members.length === 0 || !workingDays) return 0
-  return members.reduce((s, m) => s + (m.hoursPerDay || 6), 0) * workingDays
+  if (!members || members.length === 0 || !workingDays) return null
+  const devs = members.filter((m) => m.role !== 'po' && m.role !== 'qa')
+  const qas  = members.filter((m) => m.role === 'qa')
+  const devHrs = devs.reduce((s, m) => s + (m.hoursPerDay || 6), 0) * workingDays
+  const qaHrs  = qas.reduce((s, m)  => s + (m.hoursPerDay || 6), 0) * workingDays
+  return { devHrs, qaHrs, devCount: devs.length, qaCount: qas.length }
 }
 
-function QuarterCard({ stat, selected, onClick, quarterCfg, members }) {
+function QuarterCard({ stat, selected, onClick, quarterCfg, members = [] }) {
   const qc = QUARTER_COLORS[stat.quarter]
   const pct = stat.total > 0 ? Math.round(stat.done / stat.total * 100) : 0
   const [showConfig, setShowConfig] = useState(false)
@@ -346,7 +350,7 @@ function QuarterCard({ stat, selected, onClick, quarterCfg, members }) {
 
   const cfg = quarterCfg || {}
   const hasConfig = cfg.startDate || cfg.endDate
-  const capacityHrs = calcCapacity(members, cfg.workingDays)
+  const capacity = calcCapacity(members, cfg.workingDays)
 
   return (
     <>
@@ -431,11 +435,24 @@ function QuarterCard({ stat, selected, onClick, quarterCfg, members }) {
         <div style={{ fontSize: 10, color: 'var(--text3)' }}>{stat.done}/{stat.total} concluídas</div>
 
         {/* Capacity */}
-        {capacityHrs > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, padding: '4px 8px', background: qc.bg, borderRadius: 'var(--radius)', border: '1px solid ' + qc.bd }}>
-            <i className="ti ti-bolt" style={{ fontSize: 11, color: qc.tx }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: qc.tx }}>{capacityHrs}h</span>
-            <span style={{ fontSize: 10, color: 'var(--text3)' }}>capacity · {members.length} dev{members.length !== 1 ? 's' : ''} × {cfg.workingDays}d</span>
+        {capacity && (capacity.devHrs > 0 || capacity.qaHrs > 0) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 8, padding: '6px 8px', background: qc.bg, borderRadius: 'var(--radius)', border: '1px solid ' + qc.bd }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <i className="ti ti-bolt" style={{ fontSize: 11, color: qc.tx }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: qc.tx, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Capacity</span>
+            </div>
+            {capacity.devHrs > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                <span style={{ color: 'var(--text3)' }}>Dev ({capacity.devCount})</span>
+                <span style={{ fontWeight: 600, color: qc.tx }}>{capacity.devHrs}h</span>
+              </div>
+            )}
+            {capacity.qaHrs > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                <span style={{ color: 'var(--text3)' }}>QA ({capacity.qaCount})</span>
+                <span style={{ fontWeight: 600, color: qc.tx }}>{capacity.qaHrs}h</span>
+              </div>
+            )}
           </div>
         )}
 

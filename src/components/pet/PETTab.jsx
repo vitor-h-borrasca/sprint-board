@@ -69,9 +69,10 @@ export function PETTab() {
           const qc = QUARTER_COLORS[q]
           const pct = total > 0 ? Math.round(done / total * 100) : 0
           const qCfg = (store.activePetSlot?.pet?.quarterConfigs || {})[q] || {}
-          const capacityHrs = members.length > 0 && qCfg.workingDays
-            ? members.reduce((s, m) => s + (m.hoursPerDay || 6), 0) * qCfg.workingDays
-            : 0
+          const devs = members.filter((m) => m.role !== 'po' && m.role !== 'qa')
+          const qas  = members.filter((m) => m.role === 'qa')
+          const devHrs = qCfg.workingDays ? devs.reduce((s, m) => s + (m.hoursPerDay || 6), 0) * qCfg.workingDays : 0
+          const qaHrs  = qCfg.workingDays ? qas.reduce((s, m)  => s + (m.hoursPerDay || 6), 0) * qCfg.workingDays : 0
           return (
             <div key={q} onClick={() => setFilterQ(filterQ === q ? 'all' : q)}
               style={{ background: filterQ === q ? qc.bg : 'var(--surface)', border: '1px solid ' + (filterQ === q ? qc.bd : 'var(--border)'), borderRadius: 'var(--radius-lg)', padding: '14px 16px', cursor: 'pointer', transition: 'all .15s', position: 'relative' }}>
@@ -100,11 +101,24 @@ export function PETTab() {
                 <div style={{ height: '100%', width: pct + '%', background: qc.tx, borderRadius: 2, transition: 'width .4s' }} />
               </div>
               <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>{done}/{total} concluídas ({pct}%)</div>
-              {capacityHrs > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, padding: '4px 8px', background: qc.bg, borderRadius: 'var(--radius)', border: '1px solid ' + qc.bd }}>
-                  <i className="ti ti-bolt" style={{ fontSize: 11, color: qc.tx }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: qc.tx }}>{capacityHrs}h</span>
-                  <span style={{ fontSize: 10, color: 'var(--text3)' }}>capacity · {members.length} dev{members.length !== 1 ? 's' : ''} × {qCfg.workingDays}d</span>
+              {(devHrs > 0 || qaHrs > 0) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 8, padding: '6px 8px', background: qc.bg, borderRadius: 'var(--radius)', border: '1px solid ' + qc.bd }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <i className="ti ti-bolt" style={{ fontSize: 11, color: qc.tx }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, color: qc.tx, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Capacity</span>
+                  </div>
+                  {devHrs > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                      <span style={{ color: 'var(--text3)' }}>Dev ({devs.length})</span>
+                      <span style={{ fontWeight: 600, color: qc.tx }}>{devHrs}h</span>
+                    </div>
+                  )}
+                  {qaHrs > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                      <span style={{ color: 'var(--text3)' }}>QA ({qas.length})</span>
+                      <span style={{ fontWeight: 600, color: qc.tx }}>{qaHrs}h</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
