@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { QUARTERS, QUARTER_COLORS, PET_STATUSES } from '@/domain/constants'
-import { Badge } from '@/components/shared'
+import { Badge, Avatar } from '@/components/shared'
 import { quarterStats } from '@/domain/initiatives'
 import useBoardStore from '@/store/useBoardStore'
 
@@ -38,14 +38,19 @@ function DonutChart({ pct, color, size = 60 }) {
 
 export function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
   const store = useBoardStore()
+  const members = store.board.members || []
   const cfg = petSlot?.pet || {}
+
   const [form, setForm] = useState({
     startDate: cfg.startDate || '',
     endDate: cfg.endDate || '',
     workingDays: cfg.workingDays ?? 60,
     generalAbsences: cfg.generalAbsences || [],
+    memberAbsences: cfg.memberAbsences || {},
   })
   const [newAbsence, setNewAbsence] = useState({ startDate: '', endDate: '', reason: '' })
+  const [expandedMember, setExpandedMember] = useState(null)
+  const [newMemberAbsence, setNewMemberAbsence] = useState({})
   const modalRef = useRef(null)
 
   useEffect(() => {
@@ -75,6 +80,35 @@ export function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
     setForm((f) => ({ ...f, generalAbsences: f.generalAbsences.filter((a) => a.id !== id) }))
   }
 
+  function addMemberAbsence(memberId) {
+    const abs = newMemberAbsence[memberId] || {}
+    if (!abs.startDate) return
+    setForm((f) => ({
+      ...f,
+      memberAbsences: {
+        ...f.memberAbsences,
+        [memberId]: [...(f.memberAbsences[memberId] || []), { ...abs, id: Date.now().toString() }],
+      },
+    }))
+    setNewMemberAbsence((prev) => ({ ...prev, [memberId]: { startDate: '', endDate: '', reason: '' } }))
+  }
+
+  function removeMemberAbsence(memberId, absId) {
+    setForm((f) => ({
+      ...f,
+      memberAbsences: {
+        ...f.memberAbsences,
+        [memberId]: (f.memberAbsences[memberId] || []).filter((a) => a.id !== absId),
+      },
+    }))
+  }
+
+  const SectionLabel = ({ children }) => (
+    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+      {children}
+    </div>
+  )
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1000,
@@ -86,7 +120,7 @@ export function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
         border: '1px solid var(--border)',
         borderRadius: 'var(--radius-lg)',
         padding: 24,
-        width: 480,
+        width: 520,
         maxWidth: '95vw',
         maxHeight: '90vh',
         overflowY: 'auto',
@@ -105,51 +139,133 @@ export function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
 
         {/* Datas */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Período</div>
+          <SectionLabel>Período</SectionLabel>
           <div style={{ display: 'flex', gap: 10 }}>
             <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 11, color: 'var(--text2)' }}>Início</span>
-              <input
-                type="date"
-                value={form.startDate}
+              <input type="date" value={form.startDate}
                 onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-                style={{ width: '100%', fontSize: 12 }}
-              />
+                style={{ width: '100%', fontSize: 12 }} />
             </label>
             <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 11, color: 'var(--text2)' }}>Fim</span>
-              <input
-                type="date"
-                value={form.endDate}
+              <input type="date" value={form.endDate}
                 onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-                style={{ width: '100%', fontSize: 12 }}
-              />
+                style={{ width: '100%', fontSize: 12 }} />
             </label>
           </div>
         </div>
 
         {/* Dias úteis */}
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dias úteis no quarter</span>
-            <input
-              type="number"
-              min={1}
-              max={90}
-              value={form.workingDays}
+            <SectionLabel>Dias úteis no quarter</SectionLabel>
+            <input type="number" min={1} max={90} value={form.workingDays}
               onChange={(e) => setForm((f) => ({ ...f, workingDays: Number(e.target.value) }))}
-              style={{ width: 100, fontSize: 12 }}
-            />
+              style={{ width: 100, fontSize: 12 }} />
           </label>
+        </div>
+
+        {/* Integrantes */}
+        <div style={{ marginBottom: 20 }}>
+          <SectionLabel>Integrantes do time</SectionLabel>
+          {members.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--text3)', padding: '10px 0' }}>
+              Nenhum integrante cadastrado. Adicione na aba Configuração.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {members.map((m) => {
+                const mAbsences = form.memberAbsences[m.id] || []
+                const isExpanded = expandedMember === m.id
+                const mForm = newMemberAbsence[m.id] || { startDate: '', endDate: '', reason: '' }
+
+                return (
+                  <div key={m.id} style={{
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius)',
+                    overflow: 'hidden',
+                  }}>
+                    {/* Linha do membro */}
+                    <div
+                      onClick={() => setExpandedMember(isExpanded ? null : m.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 12px', cursor: 'pointer',
+                        background: isExpanded ? 'var(--surface2)' : 'var(--surface)',
+                        transition: 'background .1s',
+                      }}
+                    >
+                      <Avatar name={m.name} idx={m.colorIdx} size={26} />
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{m.name}</span>
+                      {mAbsences.length > 0 && (
+                        <Badge bg="var(--amber-bg)" bd="var(--amber-bd)" tx="var(--amber-tx)" style={{ fontSize: 10 }}>
+                          {mAbsences.length} ausência{mAbsences.length > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                      <i className={`ti ${isExpanded ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize: 12, color: 'var(--text3)' }} />
+                    </div>
+
+                    {/* Ausências do membro (expandido) */}
+                    {isExpanded && (
+                      <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+                        {mAbsences.length > 0 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+                            {mAbsences.map((a) => (
+                              <div key={a.id} style={{
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                background: 'var(--surface2)', borderRadius: 'var(--radius)',
+                                padding: '5px 8px', fontSize: 11,
+                              }}>
+                                <i className="ti ti-calendar-off" style={{ fontSize: 11, color: 'var(--amber-tx)' }} />
+                                <span style={{ flex: 1, color: 'var(--text2)' }}>
+                                  {a.startDate}{a.endDate && a.endDate !== a.startDate ? ` → ${a.endDate}` : ''}
+                                  {a.reason && <span style={{ color: 'var(--text3)', marginLeft: 6 }}>· {a.reason}</span>}
+                                </span>
+                                <button onClick={() => removeMemberAbsence(m.id, a.id)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 2 }}>
+                                  <i className="ti ti-x" style={{ fontSize: 11 }} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <span style={{ fontSize: 10, color: 'var(--text3)' }}>De</span>
+                            <input type="date" value={mForm.startDate}
+                              onChange={(e) => setNewMemberAbsence((p) => ({ ...p, [m.id]: { ...mForm, startDate: e.target.value } }))}
+                              style={{ fontSize: 11, padding: '4px 6px' }} />
+                          </label>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <span style={{ fontSize: 10, color: 'var(--text3)' }}>Até</span>
+                            <input type="date" value={mForm.endDate}
+                              onChange={(e) => setNewMemberAbsence((p) => ({ ...p, [m.id]: { ...mForm, endDate: e.target.value } }))}
+                              style={{ fontSize: 11, padding: '4px 6px' }} />
+                          </label>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 90 }}>
+                            <span style={{ fontSize: 10, color: 'var(--text3)' }}>Motivo</span>
+                            <input type="text" placeholder="ex: Férias"
+                              value={mForm.reason}
+                              onChange={(e) => setNewMemberAbsence((p) => ({ ...p, [m.id]: { ...mForm, reason: e.target.value } }))}
+                              style={{ fontSize: 11, padding: '4px 6px' }} />
+                          </label>
+                          <button onClick={() => addMemberAbsence(m.id)} style={{ fontSize: 11, padding: '5px 10px' }}>
+                            <i className="ti ti-plus" style={{ fontSize: 12 }} /> Add
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Ausências gerais */}
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-            Ausências / Feriados do quarter
-          </div>
-
-          {/* Lista de ausências */}
+          <SectionLabel>Ausências / Feriados do quarter</SectionLabel>
           {form.generalAbsences.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
               {form.generalAbsences.map((a) => (
@@ -163,46 +279,32 @@ export function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
                     {a.startDate}{a.endDate && a.endDate !== a.startDate ? ` → ${a.endDate}` : ''}
                     {a.reason ? <span style={{ color: 'var(--text3)', marginLeft: 6 }}>· {a.reason}</span> : null}
                   </span>
-                  <button
-                    onClick={() => removeAbsence(a.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 2 }}
-                  >
+                  <button onClick={() => removeAbsence(a.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 2 }}>
                     <i className="ti ti-x" style={{ fontSize: 11 }} />
                   </button>
                 </div>
               ))}
             </div>
           )}
-
-          {/* Adicionar ausência */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <span style={{ fontSize: 10, color: 'var(--text3)' }}>De</span>
-              <input
-                type="date"
-                value={newAbsence.startDate}
+              <input type="date" value={newAbsence.startDate}
                 onChange={(e) => setNewAbsence((a) => ({ ...a, startDate: e.target.value }))}
-                style={{ fontSize: 11, padding: '4px 6px' }}
-              />
+                style={{ fontSize: 11, padding: '4px 6px' }} />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <span style={{ fontSize: 10, color: 'var(--text3)' }}>Até</span>
-              <input
-                type="date"
-                value={newAbsence.endDate}
+              <input type="date" value={newAbsence.endDate}
                 onChange={(e) => setNewAbsence((a) => ({ ...a, endDate: e.target.value }))}
-                style={{ fontSize: 11, padding: '4px 6px' }}
-              />
+                style={{ fontSize: 11, padding: '4px 6px' }} />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 100 }}>
               <span style={{ fontSize: 10, color: 'var(--text3)' }}>Motivo (opcional)</span>
-              <input
-                type="text"
-                placeholder="ex: Feriado"
-                value={newAbsence.reason}
+              <input type="text" placeholder="ex: Feriado" value={newAbsence.reason}
                 onChange={(e) => setNewAbsence((a) => ({ ...a, reason: e.target.value }))}
-                style={{ fontSize: 11, padding: '4px 6px' }}
-              />
+                style={{ fontSize: 11, padding: '4px 6px' }} />
             </label>
             <button onClick={addAbsence} style={{ fontSize: 11, padding: '5px 10px' }}>
               <i className="ti ti-plus" style={{ fontSize: 12 }} /> Adicionar
