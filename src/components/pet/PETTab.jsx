@@ -68,6 +68,10 @@ export function PETTab() {
         {stats.map(({ quarter: q, total, done, late, totalHrs, initiativeCount, depriorizedCount }) => {
           const qc = QUARTER_COLORS[q]
           const pct = total > 0 ? Math.round(done / total * 100) : 0
+          const qCfg = (store.activePetSlot?.pet?.quarterConfigs || {})[q] || {}
+          const capacityHrs = members.length > 0 && qCfg.workingDays
+            ? members.reduce((s, m) => s + (m.hoursPerDay || 6), 0) * qCfg.workingDays
+            : 0
           return (
             <div key={q} onClick={() => setFilterQ(filterQ === q ? 'all' : q)}
               style={{ background: filterQ === q ? qc.bg : 'var(--surface)', border: '1px solid ' + (filterQ === q ? qc.bd : 'var(--border)'), borderRadius: 'var(--radius-lg)', padding: '14px 16px', cursor: 'pointer', transition: 'all .15s', position: 'relative' }}>
@@ -96,6 +100,13 @@ export function PETTab() {
                 <div style={{ height: '100%', width: pct + '%', background: qc.tx, borderRadius: 2, transition: 'width .4s' }} />
               </div>
               <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>{done}/{total} concluídas ({pct}%)</div>
+              {capacityHrs > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, padding: '4px 8px', background: qc.bg, borderRadius: 'var(--radius)', border: '1px solid ' + qc.bd }}>
+                  <i className="ti ti-bolt" style={{ fontSize: 11, color: qc.tx }} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: qc.tx }}>{capacityHrs}h</span>
+                  <span style={{ fontSize: 10, color: 'var(--text3)' }}>capacity · {members.length} dev{members.length !== 1 ? 's' : ''} × {qCfg.workingDays}d</span>
+                </div>
+              )}
             </div>
           )
         })}

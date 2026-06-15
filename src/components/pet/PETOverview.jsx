@@ -324,7 +324,12 @@ export function QuarterConfigModal({ quarter, qc, onClose }) {
   )
 }
 
-function QuarterCard({ stat, selected, onClick, quarterCfg }) {
+function calcCapacity(members, workingDays) {
+  if (!members || members.length === 0 || !workingDays) return 0
+  return members.reduce((s, m) => s + (m.hoursPerDay || 6), 0) * workingDays
+}
+
+function QuarterCard({ stat, selected, onClick, quarterCfg, members }) {
   const qc = QUARTER_COLORS[stat.quarter]
   const pct = stat.total > 0 ? Math.round(stat.done / stat.total * 100) : 0
   const [showConfig, setShowConfig] = useState(false)
@@ -341,6 +346,7 @@ function QuarterCard({ stat, selected, onClick, quarterCfg }) {
 
   const cfg = quarterCfg || {}
   const hasConfig = cfg.startDate || cfg.endDate
+  const capacityHrs = calcCapacity(members, cfg.workingDays)
 
   return (
     <>
@@ -424,6 +430,15 @@ function QuarterCard({ stat, selected, onClick, quarterCfg }) {
         </div>
         <div style={{ fontSize: 10, color: 'var(--text3)' }}>{stat.done}/{stat.total} concluídas</div>
 
+        {/* Capacity */}
+        {capacityHrs > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, padding: '4px 8px', background: qc.bg, borderRadius: 'var(--radius)', border: '1px solid ' + qc.bd }}>
+            <i className="ti ti-bolt" style={{ fontSize: 11, color: qc.tx }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: qc.tx }}>{capacityHrs}h</span>
+            <span style={{ fontSize: 10, color: 'var(--text3)' }}>capacity · {members.length} dev{members.length !== 1 ? 's' : ''} × {cfg.workingDays}d</span>
+          </div>
+        )}
+
         <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>
           clique para filtrar
         </div>
@@ -490,6 +505,7 @@ export function PETOverview({ initiatives, shr }) {
   const [selectedQ, setSelectedQ] = useState('all')
   const store = useBoardStore()
   const quarterConfigs = store.activePetSlot?.pet?.quarterConfigs || {}
+  const members = store.board.members || []
 
   const stats = quarterStats(initiatives, shr)
 
@@ -509,6 +525,7 @@ export function PETOverview({ initiatives, shr }) {
             selected={selectedQ === stat.quarter}
             onClick={() => setSelectedQ(selectedQ === stat.quarter ? 'all' : stat.quarter)}
             quarterCfg={quarterConfigs[stat.quarter]}
+            members={members}
           />
         ))}
       </div>
