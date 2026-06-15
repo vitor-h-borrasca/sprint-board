@@ -232,6 +232,16 @@ const useBoardStore = create((set, get) => ({
     get()._setBoard({ ...board, pets })
   },
 
+  updateQuarterConfig(quarter, cfg) {
+    const { board } = get()
+    const pets = (board.pets || []).map((s) => {
+      if (s.id !== board.activePetId) return s
+      const quarterConfigs = { ...(s.pet.quarterConfigs || {}), [quarter]: cfg }
+      return { ...s, pet: { ...s.pet, quarterConfigs } }
+    })
+    get()._setBoard({ ...board, pets })
+  },
+
   // ── Initiatives CRUD ───────────────────────────────────────────────────────
   upsertInitiative(initiative) {
     const { board } = get()

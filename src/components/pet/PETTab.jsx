@@ -57,7 +57,7 @@ export function PETTab() {
 
       {/* PET Overview */}
       {view === 'overview' && (
-        <PETOverview initiatives={initiatives} shr={shr} pets={store.board.pets || []} members={members} />
+        <PETOverview initiatives={initiatives} shr={shr} />
       )}
 
       {/* Vista Lista */}
@@ -99,18 +99,13 @@ export function PETTab() {
             </div>
           )
         })}
-        {configQ && (() => {
-          const qc = QUARTER_COLORS[configQ]
-          const petSlot = (store.board.pets || []).find((p) => p.pet?.quarter === configQ) || null
-          return (
-            <QuarterConfigModal
-              petSlot={petSlot}
-              quarter={configQ}
-              qc={qc}
-              onClose={() => setConfigQ(null)}
-            />
-          )
-        })()}
+        {configQ && (
+          <QuarterConfigModal
+            quarter={configQ}
+            qc={QUARTER_COLORS[configQ]}
+            onClose={() => setConfigQ(null)}
+          />
+        )}
       </div>
 
       {/* Filtros */}

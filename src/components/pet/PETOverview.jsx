@@ -36,10 +36,11 @@ function DonutChart({ pct, color, size = 60 }) {
   )
 }
 
-export function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
+export function QuarterConfigModal({ quarter, qc, onClose }) {
   const store = useBoardStore()
   const members = store.board.members || []
-  const cfg = petSlot?.pet || {}
+  const activePetSlot = store.activePetSlot
+  const cfg = activePetSlot?.pet?.quarterConfigs?.[quarter] || {}
 
   const [form, setForm] = useState({
     startDate: cfg.startDate || '',
@@ -62,8 +63,7 @@ export function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
   }, [onClose])
 
   function save() {
-    if (!petSlot) return
-    store.updatePetCfgById(petSlot.id, form)
+    store.updateQuarterConfig(quarter, form)
     onClose()
   }
 
@@ -324,7 +324,7 @@ export function QuarterConfigModal({ petSlot, quarter, qc, onClose }) {
   )
 }
 
-function QuarterCard({ stat, selected, onClick, petSlot }) {
+function QuarterCard({ stat, selected, onClick, quarterCfg }) {
   const qc = QUARTER_COLORS[stat.quarter]
   const pct = stat.total > 0 ? Math.round(stat.done / stat.total * 100) : 0
   const [showConfig, setShowConfig] = useState(false)
@@ -339,7 +339,7 @@ function QuarterCard({ stat, selected, onClick, petSlot }) {
           ? 'Atrasado'
           : 'Não inic.'
 
-  const cfg = petSlot?.pet || {}
+  const cfg = quarterCfg || {}
   const hasConfig = cfg.startDate || cfg.endDate
 
   return (
@@ -431,7 +431,6 @@ function QuarterCard({ stat, selected, onClick, petSlot }) {
 
       {showConfig && (
         <QuarterConfigModal
-          petSlot={petSlot}
           quarter={stat.quarter}
           qc={qc}
           onClose={() => setShowConfig(false)}
@@ -487,18 +486,16 @@ function InitiativeOverviewCard({ initiative, qc }) {
   )
 }
 
-export function PETOverview({ initiatives, shr, pets = [], members = [] }) {
+export function PETOverview({ initiatives, shr }) {
   const [selectedQ, setSelectedQ] = useState('all')
+  const store = useBoardStore()
+  const quarterConfigs = store.activePetSlot?.pet?.quarterConfigs || {}
 
   const stats = quarterStats(initiatives, shr)
 
   const filtered = selectedQ === 'all'
     ? initiatives
     : initiatives.filter((i) => i.quarter === selectedQ)
-
-  function findPetSlot(quarter) {
-    return pets.find((p) => p.pet?.quarter === quarter) || null
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -511,7 +508,7 @@ export function PETOverview({ initiatives, shr, pets = [], members = [] }) {
             stat={stat}
             selected={selectedQ === stat.quarter}
             onClick={() => setSelectedQ(selectedQ === stat.quarter ? 'all' : stat.quarter)}
-            petSlot={findPetSlot(stat.quarter)}
+            quarterCfg={quarterConfigs[stat.quarter]}
           />
         ))}
       </div>
