@@ -17,6 +17,12 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/azure-api/, ''),
         secure: true,
       },
+      '/anthropic-api': {
+        target: 'https://api.anthropic.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/anthropic-api/, ''),
+        secure: true,
+      },
     },
   },
 })
