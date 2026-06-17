@@ -27,13 +27,30 @@ async function fetchWorkItem(org, project, pat, id) {
   return res.json()
 }
 
-async function fetchFieldAllowedValues(org, project, pat, fieldName, wiType) {
-  const type = encodeURIComponent(wiType || 'Product Backlog Item')
-  const url = `/azure-api/${org}/${project}/_apis/wit/workitemtypes/${type}/fields/${fieldName}?api-version=7.0`
-  const res = await fetch(url, { headers: adoGetHeaders(pat) })
-  if (!res.ok) return []
-  const json = await res.json()
-  return json.allowedValues || []
+async function fetchFieldAllowedValues(org, project, pat, fieldName) {
+  // 1. Busca a definição do campo — pode ter allowedValues ou picklistId
+  const url1 = `/azure-api/${org}/_apis/wit/fields/${fieldName}?api-version=7.0`
+  const res1 = await fetch(url1, { headers: adoGetHeaders(pat) })
+  if (res1.ok) {
+    const f = await res1.json()
+    if (f.allowedValues?.length > 0) return f.allowedValues
+    if (f.picklistId) {
+      const url2 = `/azure-api/${org}/_apis/work/processes/lists/${f.picklistId}?api-version=7.2-preview.1`
+      const res2 = await fetch(url2, { headers: adoGetHeaders(pat) })
+      if (res2.ok) {
+        const pl = await res2.json()
+        return (pl.items || []).map(i => i.value ?? i).filter(Boolean)
+      }
+    }
+  }
+  // 2. Fallback: tenta via work item type do projeto
+  const url3 = `/azure-api/${org}/${project}/_apis/wit/workitemtypes/Product%20Backlog%20Item/fields/${fieldName}?api-version=7.0`
+  const res3 = await fetch(url3, { headers: adoGetHeaders(pat) })
+  if (res3.ok) {
+    const f3 = await res3.json()
+    if (f3.allowedValues?.length > 0) return f3.allowedValues
+  }
+  return []
 }
 
 async function patchWorkItem(org, project, pat, id, ops) {
