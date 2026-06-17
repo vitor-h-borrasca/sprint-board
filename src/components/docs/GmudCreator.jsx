@@ -157,6 +157,7 @@ export default function GmudCreator() {
   const [fileName, setFileName]   = useState('')
   const [mdErr, setMdErr]         = useState('')
 
+  const [taskExpanded, setTaskExpanded] = useState(false)
   const [review, setReview]       = useState(null)
   const [sending, setSending]     = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -436,6 +437,46 @@ ${pbiContent}`
             )}
           </div>
         )}
+
+        {/* Conteúdo da task */}
+        {workItem && (() => {
+          const f = workItem.fields || {}
+          const strip = html => (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+          const TASK_FIELDS = [
+            { label: 'Descrição',         value: strip(f['System.Description']) },
+            { label: 'Solução Proposta',  value: strip(f['Custom.9ee04e26-297a-4523-a62d-0e6b433c9ed7']) },
+            { label: 'Critérios de Aceite', value: strip(f['Microsoft.VSTS.Common.AcceptanceCriteria']) },
+            { label: 'Valor da Entrega',  value: strip(f['Custom.ANY_ValorEntrega']) },
+          ].filter(tf => tf.value)
+
+          if (!TASK_FIELDS.length) return null
+
+          return (
+            <div style={{ marginBottom: 16, border: '1px solid var(--border2)', borderRadius: 8, overflow: 'hidden' }}>
+              <div
+                onClick={() => setTaskExpanded(p => !p)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: 'var(--surface2)', cursor: 'pointer', userSelect: 'none' }}
+              >
+                <i className="ti ti-file-description" style={{ fontSize: 14, color: 'var(--text3)' }} />
+                <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>Conteúdo da task</span>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>{TASK_FIELDS.length} campo{TASK_FIELDS.length > 1 ? 's' : ''} carregado{TASK_FIELDS.length > 1 ? 's' : ''}</span>
+                <i className={`ti ti-chevron-${taskExpanded ? 'up' : 'down'}`} style={{ fontSize: 13, color: 'var(--text3)' }} />
+              </div>
+              {taskExpanded && (
+                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {TASK_FIELDS.map(tf => (
+                    <div key={tf.label}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 4 }}>{tf.label}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 12px', maxHeight: 120, overflowY: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                        {tf.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Dropdowns */}
         {workItem && (
