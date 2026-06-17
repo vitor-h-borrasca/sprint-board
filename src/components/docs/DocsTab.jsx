@@ -3,6 +3,7 @@ import PbiCreator from './PbiCreator'
 import EntregaTecnicaCreator from './EntregaTecnicaCreator'
 import BugHomCreator from './BugHomCreator'
 import DocumentacoesTab from './DocumentacoesTab'
+import GmudCreator from './GmudCreator'
 
 const TABS = [
   { k: 'feature',         icon: 'ti-stack-2',       label: 'Feature'         },
@@ -10,6 +11,7 @@ const TABS = [
   { k: 'entrega_tecnica', icon: 'ti-code',          label: 'Entrega Técnica' },
   { k: 'bug_hom',         icon: 'ti-bug',           label: 'Bug Hom'         },
   { k: 'documentacoes',   icon: 'ti-books',         label: 'Documentações'   },
+  { k: 'gmud',            icon: 'ti-clipboard-check', label: 'GMUD'          },
 ]
 
 export function DocsTab() {
@@ -41,6 +43,7 @@ export function DocsTab() {
       {tab === 'entrega_tecnica' && <EntregaTecnicaCreator />}
       {tab === 'bug_hom'         && <BugHomCreator />}
       {tab === 'documentacoes'   && <DocumentacoesTab />}
+      {tab === 'gmud'            && <GmudCreator />}
 
     </div>
   )
