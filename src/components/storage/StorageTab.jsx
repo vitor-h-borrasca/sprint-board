@@ -2,7 +2,7 @@ import { useState } from 'react'
 import useBoardStore from '@/store/useBoardStore'
 import { exportJSON, exportCSV, importJSON, cloudLoadHistory } from '@/domain/sync'
 import { fmtDateTime } from '@/domain/utils'
-import { getAzureConfig, setAzureConfig } from '@/domain/board'
+import { getAzureConfig, setAzureConfig, getAnthropicKey, setAnthropicKey } from '@/domain/board'
 import { testConnection } from '@/domain/azureDevOps'
 import { Card, SectionTitle, Field, SyncBadge } from '@/components/shared'
 
@@ -24,6 +24,15 @@ export default function StorageTab() {
   const [azureSaved, setAzureSaved] = useState(false)
   const [testingConn, setTestingConn] = useState(false)
   const [connResult, setConnResult]   = useState(null) // { ok, msg }
+
+  const [anthropicKey, setAnthropicKeyState] = useState(() => getAnthropicKey())
+  const [anthropicSaved, setAnthropicSaved]   = useState(false)
+
+  function saveAnthropic() {
+    setAnthropicKey(anthropicKey.trim())
+    setAnthropicSaved(true)
+    setTimeout(() => setAnthropicSaved(false), 2000)
+  }
 
   function saveAzure() {
     setAzureConfig(azure)
@@ -226,6 +235,35 @@ export default function StorageTab() {
 
         <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 8, fontSize: 11, color: 'var(--text3)', lineHeight: 1.6 }}>
           <b style={{ color: 'var(--text2)' }}>Como gerar um PAT:</b> Azure DevOps → User Settings → Personal Access Tokens → New Token → Work Items (Read)
+        </div>
+      </Card>
+
+      {/* ── Anthropic ── */}
+      <Card>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <SectionTitle icon="ti-robot" label="Anthropic (Claude)" />
+          {anthropicSaved && (
+            <span style={{ fontSize: 11, color: 'var(--teal-tx)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <i className="ti ti-check" /> Salvo
+            </span>
+          )}
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 16 }}>
+          Chave da API Anthropic usada para gerar GMUD automaticamente a partir do PBI.
+        </p>
+        <Field label="API Key" hint="Começa com sk-ant-...">
+          <input
+            type="password"
+            value={anthropicKey}
+            onChange={e => setAnthropicKeyState(e.target.value)}
+            placeholder="sk-ant-••••••••••••••••••••••"
+            style={{ fontFamily: 'monospace', fontSize: 11 }}
+          />
+        </Field>
+        <div style={{ marginTop: 14 }}>
+          <button className="primary" style={{ fontSize: 12 }} onClick={saveAnthropic}>
+            <i className="ti ti-device-floppy" /> Salvar chave
+          </button>
         </div>
       </Card>
 

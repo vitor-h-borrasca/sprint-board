@@ -149,6 +149,17 @@ export function setAzureConfig({ org, project, pat }) {
   } catch (e) { console.error(e) }
 }
 
+export function getAnthropicKey() {
+  try { return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}').anthropicKey || '' } catch { return '' }
+}
+
+export function setAnthropicKey(key) {
+  try {
+    const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}')
+    localStorage.setItem(CONFIG_KEY, JSON.stringify({ ...cfg, anthropicKey: key }))
+  } catch (e) { console.error(e) }
+}
+
 export function setEvalAreaPath(path) {
   try {
     const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}')

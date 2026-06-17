@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { marked } from 'marked'
 
-// ── Azure helpers ─────────────────────────────────────────────────────────────
+// ── Config helpers ────────────────────────────────────────────────────────────
 
 function getAzureConfig() {
   try {
@@ -10,6 +10,10 @@ function getAzureConfig() {
   } catch {
     return { org: '', project: 'ANYMARKET', pat: '' }
   }
+}
+
+function getAnthropicKey() {
+  try { return JSON.parse(localStorage.getItem('sprint-board-config') || '{}').anthropicKey || '' } catch { return '' }
 }
 
 function adoHeaders(pat) {
@@ -153,8 +157,10 @@ export default function GmudCreator() {
   const [fileName, setFileName]   = useState('')
   const [mdErr, setMdErr]         = useState('')
 
-  const [review, setReview]       = useState(null)  // ops prontas para confirmar
+  const [review, setReview]       = useState(null)
   const [sending, setSending]     = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [genErr, setGenErr]       = useState('')
   const [result, setResult]       = useState(null)
   const fileRef = useRef(null)
 
@@ -215,6 +221,87 @@ export default function GmudCreator() {
       setMdFields(parsed)
     }
     reader.readAsText(file)
+  }
+
+  // ── Gerar GMUD por IA ───────────────────────────────────────────────────────
+
+  async function handleGenerateAI() {
+    if (!workItem) return
+    const apiKey = getAnthropicKey()
+    if (!apiKey) { setGenErr('Configure a chave da API Anthropic em Configuração → Integrações.'); return }
+
+    setGenerating(true)
+    setGenErr('')
+    setMdFields(null)
+    setFileName('')
+
+    const fields = workItem.fields || {}
+    const pbiContent = [
+      `Título: ${fields['System.Title'] || ''}`,
+      `Tipo: ${fields['System.WorkItemType'] || ''}`,
+      `Estado: ${fields['System.State'] || ''}`,
+      fields['System.Description'] ? `\nDescrição:\n${fields['System.Description'].replace(/<[^>]*>/g, ' ')}` : '',
+      fields['Custom.9ee04e26-297a-4523-a62d-0e6b433c9ed7'] ? `\nSolução Proposta:\n${fields['Custom.9ee04e26-297a-4523-a62d-0e6b433c9ed7'].replace(/<[^>]*>/g, ' ')}` : '',
+      fields['Microsoft.VSTS.Common.AcceptanceCriteria'] ? `\nCritérios de Aceite:\n${fields['Microsoft.VSTS.Common.AcceptanceCriteria'].replace(/<[^>]*>/g, ' ')}` : '',
+      fields['Custom.ANY_ValorEntrega'] ? `\nValor da Entrega:\n${fields['Custom.ANY_ValorEntrega'].replace(/<[^>]*>/g, ' ')}` : '',
+    ].filter(Boolean).join('\n')
+
+    const prompt = `Você é um especialista em documentação de mudanças (GMUD) para sistemas de marketplace.
+
+Com base nas informações do PBI abaixo, preencha cada seção da GMUD em formato Markdown.
+Retorne APENAS um JSON válido com as chaves abaixo, sem texto adicional antes ou depois.
+Para cada campo, escreva o conteúdo em Markdown puro (sem HTML).
+Se não houver informação suficiente para um campo, retorne string vazia "".
+
+Campos esperados no JSON:
+- impactoPartes: Quais partes do ANYMARKET serão impactadas (sistemas, APIs, tabelas, migrations)
+- riscos: Como os riscos do impacto serão tratados (tabela risco x mitigação)
+- planoImpl: Plano de implementação (pré-condições e sequência de deploy)
+- planoRetorno: Plano de retorno — monitoramento, métricas de sucesso e riscos pós-deploy
+- planoRollback: Plano de rollback (condição para acionar e passos)
+- comunicacaoDetalhe: Plano de comunicação (tabela: quem, quando, o que comunicar)
+- mitigarImpacto: Plano de ação para mitigar/eliminar impacto negativo (tabela)
+- pessoas: Pessoas envolvidas (PO: Vitor Hugo Borrasca; dev e homologador se disponíveis)
+- timesImpactados: Times impactados pela mudança
+- funcCriticas: Funcionalidades críticas afetadas
+- alteracaoCampos: Alteração de campos no sistema
+
+PBI:
+${pbiContent}`
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4096,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error?.message || `Erro ${res.status}`)
+      }
+
+      const data = await res.json()
+      const text = data.content?.[0]?.text || ''
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) throw new Error('Resposta inesperada da IA — tente novamente.')
+      const parsed = JSON.parse(jsonMatch[0])
+      setMdFields(parsed)
+      setFileName('Gerado por IA')
+    } catch (err) {
+      setGenErr(err.message)
+    } finally {
+      setGenerating(false)
+    }
   }
 
   // ── Montar review ───────────────────────────────────────────────────────────
@@ -288,7 +375,7 @@ export default function GmudCreator() {
         {/* Busca por ID */}
         <div style={{ marginBottom: 16 }}>
           <LBL>ID DO WORK ITEM</LBL>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input
               value={wiId}
               onChange={e => setWiId(e.target.value)}
@@ -306,10 +393,30 @@ export default function GmudCreator() {
                 : <><i className="ti ti-search" style={{ fontSize: 14 }} /> Buscar</>
               }
             </button>
+            <button
+              onClick={handleGenerateAI}
+              disabled={!workItem || generating}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
+                background: workItem ? 'var(--surface)' : 'var(--surface2)',
+                color: workItem ? 'var(--navy)' : 'var(--text3)',
+                borderColor: workItem ? 'var(--navy)' : 'var(--border2)',
+              }}
+              title={!workItem ? 'Busque uma tarefa primeiro' : 'Gerar campos da GMUD automaticamente com IA'}
+            >
+              {generating
+                ? <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: 14 }} /> Gerando...</>
+                : <><i className="ti ti-sparkles" style={{ fontSize: 14 }} /> Gerar GMUD por IA</>
+              }
+            </button>
           </div>
           {searchErr && (
             <div style={{ marginTop: 8, fontSize: 12, color: 'var(--danger, #e53e3e)', background: 'var(--danger-bg, #fff5f5)', border: '1px solid var(--danger-bd, #fed7d7)', borderRadius: 6, padding: '8px 12px' }}>
               {searchErr}
+            </div>
+          )}
+          {genErr && (
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--danger, #e53e3e)', background: 'var(--danger-bg, #fff5f5)', border: '1px solid var(--danger-bd, #fed7d7)', borderRadius: 6, padding: '8px 12px' }}>
+              <i className="ti ti-alert-circle" style={{ marginRight: 4 }} />{genErr}
             </div>
           )}
         </div>
