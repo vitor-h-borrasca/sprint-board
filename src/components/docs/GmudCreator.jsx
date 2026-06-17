@@ -153,6 +153,7 @@ export default function GmudCreator() {
   const [fileName, setFileName]   = useState('')
   const [mdErr, setMdErr]         = useState('')
 
+  const [review, setReview]       = useState(null)  // ops prontas para confirmar
   const [sending, setSending]     = useState(false)
   const [result, setResult]       = useState(null)
   const fileRef = useRef(null)
@@ -216,35 +217,52 @@ export default function GmudCreator() {
     reader.readAsText(file)
   }
 
-  // ── Enviar para ADO ─────────────────────────────────────────────────────────
+  // ── Montar review ───────────────────────────────────────────────────────────
 
-  async function handleSubmit() {
+  function handlePreview() {
     if (!workItem) return
     if (!dropdownSel.impacto) { alert('O campo "Nível de impacto esperado" é obrigatório.'); return }
 
+    const ops = []
+
+    for (const df of DROPDOWN_FIELDS) {
+      const val = dropdownSel[df.key]
+      if (val) ops.push({ field: df.field, label: df.label, value: val, type: 'dropdown' })
+    }
+
+    if (mdFields) {
+      for (const tf of TEXT_FIELDS) {
+        const raw = mdFields[tf.key]
+        ops.push({ field: tf.field, label: tf.label, value: raw || '', type: 'text' })
+      }
+    }
+
+    setReview(ops)
+    setResult(null)
+  }
+
+  // ── Confirmar e enviar para ADO ─────────────────────────────────────────────
+
+  async function handleConfirm() {
+    if (!review || !workItem) return
     setSending(true)
     setResult(null)
     const { org, project, pat } = getAzureConfig()
 
     try {
-      const ops = []
-
-      for (const df of DROPDOWN_FIELDS) {
-        const val = dropdownSel[df.key]
-        if (val) ops.push({ op: 'add', path: `/fields/${df.field}`, value: val })
-      }
-
-      if (mdFields) {
-        for (const tf of TEXT_FIELDS) {
-          const raw = mdFields[tf.key]
-          if (raw) ops.push({ op: 'add', path: `/fields/${tf.field}`, value: toHtml(raw) })
-        }
-      }
+      const ops = review
+        .filter(op => op.value)
+        .map(op => ({
+          op: 'add',
+          path: `/fields/${op.field}`,
+          value: op.type === 'text' ? toHtml(op.value) : op.value,
+        }))
 
       if (ops.length === 0) { alert('Nenhum campo para preencher.'); setSending(false); return }
 
       await patchWorkItem(org, project, pat, workItem.id, ops)
       setResult({ ok: true, count: ops.length })
+      setReview(null)
     } catch (err) {
       setResult({ ok: false, error: err.message })
     } finally {
@@ -389,17 +407,14 @@ export default function GmudCreator() {
           </div>
         )}
 
-        {/* Botão enviar */}
-        {workItem && (
+        {/* Botão revisar */}
+        {workItem && !review && (
           <button
-            onClick={handleSubmit}
-            disabled={sending || !dropdownSel.impacto}
+            onClick={handlePreview}
+            disabled={!dropdownSel.impacto}
             style={{ background: 'var(--navy)', color: '#fff', borderColor: 'var(--navy)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}
           >
-            {sending
-              ? <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: 14 }} /> Enviando...</>
-              : <><i className="ti ti-send" style={{ fontSize: 14 }} /> Preencher campos no ADO</>
-            }
+            <i className="ti ti-eye" style={{ fontSize: 14 }} /> Revisar campos →
           </button>
         )}
 
@@ -420,6 +435,65 @@ export default function GmudCreator() {
           </div>
         )}
       </div>
+
+      {/* Review */}
+      {review && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4, borderBottom: '1px solid var(--border2)', paddingBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            Revisão dos campos
+            <button onClick={() => setReview(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text3)', fontSize: 12, cursor: 'pointer' }}>
+              <i className="ti ti-x" style={{ fontSize: 13 }} /> Voltar
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 14 }}>
+            {review.map((op, i) => {
+              const empty = !op.value || !op.value.trim()
+              const preview = op.type === 'text'
+                ? op.value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+                : op.value
+              return (
+                <div key={i}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--text3)' }}>
+                      {op.type === 'dropdown' && <i className="ti ti-chevron-down" style={{ fontSize: 10, marginRight: 3 }} />}
+                      {op.label}
+                    </span>
+                    {empty && <span style={{ fontSize: 10, color: 'var(--amber-tx, #744210)', background: 'var(--amber-bg, #fffbeb)', border: '1px solid var(--amber-bd, #f6e05e)', borderRadius: 4, padding: '1px 6px' }}>vazio — não será enviado</span>}
+                  </div>
+                  <div style={{
+                    background: empty ? 'var(--surface2)' : 'var(--surface)',
+                    border: '1px solid var(--border)', borderRadius: 'var(--radius, 6px)',
+                    padding: '8px 12px', fontSize: 12,
+                    color: empty ? 'var(--text3)' : 'var(--text2)',
+                    fontStyle: empty ? 'italic' : 'normal',
+                    whiteSpace: 'pre-wrap', lineHeight: 1.6,
+                    maxHeight: 100, overflowY: 'auto',
+                  }}>
+                    {empty ? '(não preenchido)' : preview}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+            <button
+              onClick={handleConfirm}
+              disabled={sending}
+              style={{ background: 'var(--navy)', color: '#fff', borderColor: 'var(--navy)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}
+            >
+              {sending
+                ? <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: 14 }} /> Enviando...</>
+                : <><i className="ti ti-send" style={{ fontSize: 14 }} /> Confirmar e enviar ao ADO</>
+              }
+            </button>
+            <button onClick={() => setReview(null)} style={{ fontSize: 14 }}>
+              Voltar e editar
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   )
