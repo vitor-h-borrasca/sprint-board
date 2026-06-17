@@ -1,70 +1,117 @@
 import { useState, useEffect, useRef } from 'react'
+import { getScriptUrl } from '@/domain/board'
 
-const STORAGE_KEY = 'sprint_board_documentacoes'
-
-const EMPTY_LINK = () => ({ id: Date.now() + Math.random(), label: '', url: '' })
+const EMPTY_LINK  = () => ({ id: Date.now() + Math.random(), label: '', url: '' })
 const EMPTY_CANAL = () => ({ id: Date.now() + Math.random(), canal: '', links: [EMPTY_LINK()] })
 
-function load() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [] } catch { return [] }
+async function fetchDocumentacoes() {
+  const url = getScriptUrl()
+  if (!url) return []
+  const res = await fetch(`${url}?action=load_documentacoes`)
+  const json = await res.json()
+  if (!json.ok) return []
+  return (json.canais || []).map(c => ({
+    ...c,
+    id: Date.now() + Math.random(),
+    links: (c.links || []).map(l => ({ ...l, id: Date.now() + Math.random() })),
+  }))
 }
 
-function save(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+async function saveDocumentacoes(canais) {
+  const url = getScriptUrl()
+  if (!url) return
+  await fetch(url, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'save_documentacoes', canais }),
+  })
 }
 
 export default function DocumentacoesTab() {
-  const [canais, setCanais] = useState(load)
+  const [canais, setCanais]     = useState([])
   const [editingId, setEditingId] = useState(null)
+  const [loading, setLoading]   = useState(true)
+  const [saving, setSaving]     = useState(false)
   const inputRef = useRef(null)
+  const saveTimer = useRef(null)
 
-  useEffect(() => { save(canais) }, [canais])
+  useEffect(() => {
+    fetchDocumentacoes().then(data => {
+      setCanais(data)
+      setLoading(false)
+    })
+  }, [])
 
   useEffect(() => {
     if (editingId && inputRef.current) inputRef.current.focus()
   }, [editingId])
 
+  function scheduleSave(next) {
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      setSaving(true)
+      saveDocumentacoes(next).finally(() => setSaving(false))
+    }, 1000)
+  }
+
+  function update(fn) {
+    setCanais(prev => {
+      const next = fn(prev)
+      scheduleSave(next)
+      return next
+    })
+  }
+
   function addCanal() {
     const novo = EMPTY_CANAL()
-    setCanais(prev => [...prev, novo])
+    update(prev => [...prev, novo])
     setEditingId(novo.id)
   }
 
   function removeCanal(id) {
-    setCanais(prev => prev.filter(c => c.id !== id))
+    update(prev => prev.filter(c => c.id !== id))
     if (editingId === id) setEditingId(null)
   }
 
   function updateCanal(id, field, value) {
-    setCanais(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
+    update(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
   }
 
   function addLink(canalId) {
-    setCanais(prev => prev.map(c =>
+    update(prev => prev.map(c =>
       c.id === canalId ? { ...c, links: [...c.links, EMPTY_LINK()] } : c
     ))
   }
 
   function removeLink(canalId, linkId) {
-    setCanais(prev => prev.map(c =>
+    update(prev => prev.map(c =>
       c.id === canalId ? { ...c, links: c.links.filter(l => l.id !== linkId) } : c
     ))
   }
 
   function updateLink(canalId, linkId, field, value) {
-    setCanais(prev => prev.map(c =>
+    update(prev => prev.map(c =>
       c.id === canalId
         ? { ...c, links: c.links.map(l => l.id === linkId ? { ...l, [field]: value } : l) }
         : c
     ))
   }
 
+  if (loading) return (
+    <div style={{ color: 'var(--text3)', fontSize: 13, padding: 16 }}>
+      <i className="ti ti-loader-2 ti-spin" style={{ marginRight: 6 }} />
+      Carregando documentações...
+    </div>
+  )
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 13, color: 'var(--text2)' }}>
-          {canais.length === 0 ? 'Nenhum canal cadastrado.' : `${canais.length} canal${canais.length > 1 ? 'is' : ''}`}
+          {saving
+            ? <><i className="ti ti-loader-2 ti-spin" style={{ marginRight: 4 }} />Salvando...</>
+            : canais.length === 0 ? 'Nenhum canal cadastrado.' : `${canais.length} canal${canais.length > 1 ? 'is' : ''}`
+          }
         </span>
         <button
           onClick={addCanal}
@@ -120,7 +167,7 @@ export default function DocumentacoesTab() {
               </button>
             </div>
 
-            {/* Links — visível quando expandido */}
+            {/* Links — modo edição */}
             {editing && (
               <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {canal.links.map((link, idx) => (
