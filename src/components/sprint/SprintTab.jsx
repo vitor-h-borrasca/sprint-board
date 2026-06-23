@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSprint } from '@/hooks/useSprint'
 import useBoardStore from '@/store/useBoardStore'
-import { STATUSES, SIZES, TYPES, TYPE_LABELS, PRIORITIES } from '@/domain/constants'
+import { STATUSES, SIZES, TYPES, TYPE_LABELS, PRIORITIES, STORY_POINTS } from '@/domain/constants'
 import { fmtHrs, genId } from '@/domain/utils'
 import { taskHrs } from '@/domain/capacity'
 import { SectionTitle, TypeBadge, SizeBadge, StatusBadge, Avatar, CapacityBar } from '@/components/shared'
@@ -222,6 +222,17 @@ function SprintTaskRow({ task, shr, members, onStatusChange, onRemoveFromSprint,
         <SizeBadge size={task.size} shr={shr} task={task} />
       </span>
 
+      {task.devPoints != null && (
+        <span title="Story points Dev" style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: 'var(--blue-bg)', border: '1px solid var(--blue-bd)', color: 'var(--blue-tx)' }}>
+          <i className="ti ti-code" style={{ fontSize: 10, marginRight: 3 }} />{task.devPoints}
+        </span>
+      )}
+      {task.bizPoints != null && (
+        <span title="Story points Negócio" style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: 'var(--purple-bg)', border: '1px solid var(--purple-bd)', color: 'var(--purple-tx)' }}>
+          <i className="ti ti-briefcase" style={{ fontSize: 10, marginRight: 3 }} />{task.bizPoints}
+        </span>
+      )}
+
       {/* Avatares */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         {assignee   && <Avatar name={assignee.name}   idx={assignee.colorIdx}   size={22} />}
@@ -258,6 +269,7 @@ function SprintTaskForm({ task, members, shr, allSprints, onSave, onCancel }) {
     priority: task.priority, description: task.description || '',
     assigneeId: task.assigneeId || '', qaAssigneeId: task.qaAssigneeId || '',
     devHrs: task.devHrs || 0, qaHrs: task.qaHrs || 0, customHrs: task.customHrs || 0,
+    devPoints: task.devPoints ?? null, bizPoints: task.bizPoints ?? null,
     status: task.status || 'todo', sprintId: task.sprintId,
     devStartDate: task.devStartDate || '', devEndDate: task.devEndDate || '',
     qaStartDate: task.qaStartDate || '', qaEndDate: task.qaEndDate || '',
@@ -266,6 +278,7 @@ function SprintTaskForm({ task, members, shr, allSprints, onSave, onCancel }) {
     id: genId(), title: '', type: 'feature', size: 'M', priority: 2,
     description: '', assigneeId: '', qaAssigneeId: '',
     devHrs: 0, qaHrs: 0, customHrs: 0,
+    devPoints: null, bizPoints: null,
     status: 'todo', sprintId: allSprints.find((s) => s.id)?.id || '',
     devStartDate: '', devEndDate: '', qaStartDate: '', qaEndDate: '',
     sprintExec: { dev: true, qa: true },
@@ -325,6 +338,21 @@ function SprintTaskForm({ task, members, shr, allSprints, onSave, onCancel }) {
         <LabeledField label="Sprint">
           <select value={form.sprintId} onChange={(e) => f('sprintId', e.target.value)} style={{ fontSize: 12 }}>
             {allSprints.map((s) => <option key={s.id} value={s.id}>{s.sprint.name}</option>)}
+          </select>
+        </LabeledField>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <LabeledField label="Pontos Dev">
+          <select value={form.devPoints ?? ''} onChange={(e) => f('devPoints', e.target.value === '' ? null : Number(e.target.value))} style={{ fontSize: 12 }}>
+            <option value="">— sem estimativa</option>
+            {STORY_POINTS.map((p) => <option key={p} value={p}>{p} {p === 1 ? 'pt' : 'pts'}</option>)}
+          </select>
+        </LabeledField>
+        <LabeledField label="Pontos Negócio">
+          <select value={form.bizPoints ?? ''} onChange={(e) => f('bizPoints', e.target.value === '' ? null : Number(e.target.value))} style={{ fontSize: 12 }}>
+            <option value="">— sem estimativa</option>
+            {STORY_POINTS.map((p) => <option key={p} value={p}>{p} {p === 1 ? 'pt' : 'pts'}</option>)}
           </select>
         </LabeledField>
       </div>

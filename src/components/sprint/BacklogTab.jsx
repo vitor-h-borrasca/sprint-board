@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useSprint } from '@/hooks/useSprint'
 import useBoardStore, { filterByAreaPath } from '@/store/useBoardStore'
 import FeaturesTab from '@/components/features/FeaturesTab'
-import { SIZES, TYPES, TYPE_LABELS, PRIORITIES, DEFAULT_SIZE_HRS } from '@/domain/constants'
+import { SIZES, TYPES, TYPE_LABELS, PRIORITIES, DEFAULT_SIZE_HRS, STORY_POINTS } from '@/domain/constants'
 import { fmtHrs, genId } from '@/domain/utils'
 import { taskHrs } from '@/domain/capacity'
 import { SectionTitle, TypeBadge, SizeBadge, Avatar, Badge } from '@/components/shared'
@@ -11,6 +11,7 @@ const EMPTY_TASK = () => ({
   code: '', title: '', type: 'pbi', size: 'P', priority: 2,
   description: '', assigneeId: '', qaAssigneeId: '',
   devHrs: '', qaHrs: '', customHrs: 0,
+  devPoints: null, bizPoints: null,
   devStartDate: '', devEndDate: '', qaStartDate: '', qaEndDate: '',
   sprintId: '', petSlotId: '', initiativeId: '', featureId: '',
   areaPath: '',
@@ -85,6 +86,8 @@ export default function BacklogTab() {
       customHrs: t.customHrs || 0,
       devStartDate: t.devStartDate || '', devEndDate: t.devEndDate || '',
       qaStartDate:  t.qaStartDate  || '', qaEndDate:  t.qaEndDate  || '',
+      devPoints:   t.devPoints  ?? null,
+      bizPoints:   t.bizPoints  ?? null,
       sprintId:    t.sprintId    || '',
       petSlotId:   t.petSlotId   || '',
       initiativeId: t.initiativeId || '',
@@ -440,6 +443,24 @@ function TaskForm({ form, setForm, members, allSprints, pets, shr, features, onS
         </div>
       </div>
 
+      {/* Story Points Dev + Negócio */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+        <div>
+          <LBL>Pontos Dev <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(story points)</span></LBL>
+          <select value={form.devPoints ?? ''} onChange={(e) => f('devPoints', e.target.value === '' ? null : Number(e.target.value))} style={{ fontSize: 12 }}>
+            <option value="">— sem estimativa</option>
+            {STORY_POINTS.map((p) => <option key={p} value={p}>{p} {p === 1 ? 'pt' : 'pts'}</option>)}
+          </select>
+        </div>
+        <div>
+          <LBL>Pontos Negócio <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(story points)</span></LBL>
+          <select value={form.bizPoints ?? ''} onChange={(e) => f('bizPoints', e.target.value === '' ? null : Number(e.target.value))} style={{ fontSize: 12 }}>
+            <option value="">— sem estimativa</option>
+            {STORY_POINTS.map((p) => <option key={p} value={p}>{p} {p === 1 ? 'pt' : 'pts'}</option>)}
+          </select>
+        </div>
+      </div>
+
       {/* Datas Dev + QA */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
         <div>
@@ -682,6 +703,16 @@ function TaskRow({ task, shr, members, allSprints, features = [], onEdit, onDele
       <span style={{ flexShrink: 0, opacity: task.ignored ? 0.4 : 1, textDecoration: task.ignored ? 'line-through' : 'none' }}>
         <SizeBadge size={task.size} shr={shr} task={task} />
       </span>
+      {task.devPoints != null && (
+        <span title="Story points Dev" style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: 'var(--blue-bg)', border: '1px solid var(--blue-bd)', color: 'var(--blue-tx)' }}>
+          <i className="ti ti-code" style={{ fontSize: 10, marginRight: 3 }} />{task.devPoints}
+        </span>
+      )}
+      {task.bizPoints != null && (
+        <span title="Story points Negócio" style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: 'var(--purple-bg)', border: '1px solid var(--purple-bd)', color: 'var(--purple-tx)' }}>
+          <i className="ti ti-briefcase" style={{ fontSize: 10, marginRight: 3 }} />{task.bizPoints}
+        </span>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         {assignee   && <Avatar name={assignee.name}   idx={assignee.colorIdx}   size={24} />}
         {qaAssignee && qaAssignee.id !== assignee?.id && (

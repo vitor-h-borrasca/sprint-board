@@ -82,6 +82,9 @@ export const AVATAR_PAL = [
   ['#FFE4E6', '#9F1239'],
 ]
 
+// Story points (Fibonacci scrum)
+export const STORY_POINTS = [1, 2, 3, 5, 8, 13, 20, 40, 100]
+
 // Limite de iniciativas por quarter
 export const MAX_INITIATIVES_PER_QUARTER = 2
 
