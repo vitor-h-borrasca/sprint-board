@@ -378,9 +378,8 @@ export async function fetchBugClients(teamAreaPath, { org, project, pat }) {
   return items.map((wi) => {
     const f = wi.fields || {}
 
-    // Desenvolvedor: campo customizado tem precedência sobre System.AssignedTo
     const desenvolvedorRaw = f['Custom.Desenvolvedor']
-    const desenvolvedor = desenvolvedorRaw?.displayName || desenvolvedorRaw || f['System.AssignedTo']?.displayName || ''
+    const desenvolvedor = desenvolvedorRaw?.displayName || desenvolvedorRaw || ''
 
     // clienteLiberado: pode ser datetime ISO — formata para pt-BR
     const clienteLiberadoRaw = f['Custom.Anymarket_ClienteLiberado'] ?? ''
@@ -498,7 +497,7 @@ async function _fetchBugItems(wiql, org, project, pat) {
   return items.map((wi) => {
     const f = wi.fields || {}
     const desenvolvedorRaw = f['Custom.Desenvolvedor']
-    const desenvolvedor = desenvolvedorRaw?.displayName || desenvolvedorRaw || f['System.AssignedTo']?.displayName || ''
+    const desenvolvedor = desenvolvedorRaw?.displayName || desenvolvedorRaw || ''
     return {
       id: wi.id,
       title: f['System.Title'] || '',
