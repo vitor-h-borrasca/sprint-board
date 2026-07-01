@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { loadBoardData, saveBoardData, getBoardDefault, getScriptUrl, setScriptUrl as persistScriptUrl, makeSprint, makePetSlot, getSizeHrs, getActiveSprint, getActivePet } from '@/domain/board'
-import { cloudSave, cloudLoad, cloudSavePet } from '@/domain/sync'
+import { cloudSave, cloudLoad, cloudSavePet, cloudLoadPet } from '@/domain/sync'
 import { genId } from '@/domain/utils'
 import { getSessionTeam, getSessionTeamAreaPath, getSessionTeamProjetoIntegracao } from '@/domain/auth'
 
@@ -42,9 +42,32 @@ const useBoardStore = create((set, get) => ({
 
   // ── Init por time ──────────────────────────────────────────────────────────
   initTeam(teamName, teamAreaPath, teamProjetoIntegracao) {
-    if (get().team === teamName && get().teamAreaPath === (teamAreaPath || '')) return
-    const board = loadBoardData(teamName)
-    set({ team: teamName, teamAreaPath: teamAreaPath || '', teamProjetoIntegracao: teamProjetoIntegracao || '', board, syncStatus: 'idle' })
+    const sameTeam = get().team === teamName && get().teamAreaPath === (teamAreaPath || '')
+    if (!sameTeam) {
+      const board = loadBoardData(teamName)
+      set({ team: teamName, teamAreaPath: teamAreaPath || '', teamProjetoIntegracao: teamProjetoIntegracao || '', board, syncStatus: 'idle' })
+    }
+    get().loadPetFromCloud()
+  },
+
+  // PET-Config é isolado por time no Apps Script (diferente do sprint-data,
+  // que é um blob único sem isolamento — ver comentário em App.jsx)
+  async loadPetFromCloud() {
+    const { scriptUrl: url, team } = get()
+    if (!url || !team) return
+    try {
+      const cloud = await cloudLoadPet(team, url)
+      if (!cloud || Object.keys(cloud.quarterConfigs).length === 0) return
+      const board = get().board
+      const pets = (board.pets || []).map((s) => {
+        if (s.id !== board.activePetId) return s
+        const quarterConfigs = { ...cloud.quarterConfigs, ...(s.pet.quarterConfigs || {}) }
+        return { ...s, pet: { ...s.pet, quarterConfigs } }
+      })
+      const newBoard = { ...board, pets }
+      set({ board: newBoard })
+      saveBoardData(newBoard, team)
+    } catch {}
   },
 
   resetTeamBoard() {

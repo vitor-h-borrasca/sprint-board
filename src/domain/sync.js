@@ -47,6 +47,28 @@ export async function cloudSave(boardData, name, url) {
   if (!verify) throw new Error('Verificação pós-save falhou')
 }
 
+// Sheets converte "2026-07-01" em cédula de data; ao ler de volta o Apps
+// Script devolve um datetime ISO completo, que <input type="date"> não aceita.
+function toDateInputValue(v) {
+  if (!v) return ''
+  const s = String(v)
+  return s.includes('T') ? s.slice(0, 10) : s
+}
+
+export async function cloudLoadPet(team, url) {
+  if (!url) throw new Error('URL não configurada')
+  if (!team) return null
+  const res = await fetch(`${url}?action=load_pet&team=${encodeURIComponent(team)}`, { method: 'GET' })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  const json = JSON.parse(await res.text())
+  if (!json.ok) return null
+  const quarterConfigs = {}
+  Object.entries(json.configs || {}).forEach(([q, c]) => {
+    quarterConfigs[q] = { ...c, startDate: toDateInputValue(c.startDate), endDate: toDateInputValue(c.endDate) }
+  })
+  return { quarterConfigs }
+}
+
 export async function cloudLoad(url) {
   if (!url) throw new Error('URL não configurada')
   const res = await fetch(url, { method: 'GET' })
