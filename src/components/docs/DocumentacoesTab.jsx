@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { getScriptUrl } from '@/domain/board'
+import { fetchTeams } from '@/domain/auth'
+import useBoardStore from '@/store/useBoardStore'
 
 const EMPTY_LINK  = () => ({ id: Date.now() + Math.random(), label: '', url: '' })
-const EMPTY_CANAL = () => ({ id: Date.now() + Math.random(), canal: '', links: [EMPTY_LINK()] })
+const EMPTY_CANAL = (team) => ({ id: Date.now() + Math.random(), canal: '', team: team || '', links: [EMPTY_LINK()] })
 
-async function fetchDocumentacoes() {
+async function fetchDocumentacoes(team) {
   const url = getScriptUrl()
   if (!url) return []
-  const res = await fetch(`${url}?action=load_documentacoes`)
+  const res = await fetch(`${url}?action=load_documentacoes&team=${encodeURIComponent(team || '')}`)
   const json = await res.json()
   if (!json.ok) return []
   return (json.canais || []).map(c => ({
@@ -17,17 +19,19 @@ async function fetchDocumentacoes() {
   }))
 }
 
-async function saveDocumentacoes(canais) {
+async function saveDocumentacoes(canais, team) {
   const url = getScriptUrl()
   if (!url) return
   await fetch(url, {
     method: 'POST',
-    body: JSON.stringify({ action: 'save_documentacoes', canais }),
+    body: JSON.stringify({ action: 'save_documentacoes', team, canais }),
   })
 }
 
 export default function DocumentacoesTab() {
+  const team = useBoardStore((s) => s.team)
   const [canais, setCanais]     = useState([])
+  const [teams, setTeams]       = useState([])
   const [editingId, setEditingId] = useState(null)
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
@@ -35,11 +39,16 @@ export default function DocumentacoesTab() {
   const saveTimer = useRef(null)
 
   useEffect(() => {
-    fetchDocumentacoes().then(data => {
+    fetchTeams().then(setTeams).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    setLoading(true)
+    fetchDocumentacoes(team).then(data => {
       setCanais(data)
       setLoading(false)
     })
-  }, [])
+  }, [team])
 
   useEffect(() => {
     if (editingId && inputRef.current) inputRef.current.focus()
@@ -49,7 +58,7 @@ export default function DocumentacoesTab() {
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       setSaving(true)
-      saveDocumentacoes(next).finally(() => setSaving(false))
+      saveDocumentacoes(next, team).finally(() => setSaving(false))
     }, 1000)
   }
 
@@ -62,7 +71,7 @@ export default function DocumentacoesTab() {
   }
 
   function addCanal() {
-    const novo = EMPTY_CANAL()
+    const novo = EMPTY_CANAL(team)
     update(prev => [...prev, novo])
     setEditingId(novo.id)
   }
@@ -103,6 +112,8 @@ export default function DocumentacoesTab() {
     </div>
   )
 
+  const visivel = canais.filter(c => !c.team || c.team === team)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
@@ -110,7 +121,7 @@ export default function DocumentacoesTab() {
         <span style={{ fontSize: 13, color: 'var(--text2)' }}>
           {saving
             ? <><i className="ti ti-loader-2 ti-spin" style={{ marginRight: 4 }} />Salvando...</>
-            : canais.length === 0 ? 'Nenhum canal cadastrado.' : `${canais.length} canal${canais.length > 1 ? 'is' : ''}`
+            : visivel.length === 0 ? 'Nenhum canal cadastrado.' : `${visivel.length} canal${visivel.length > 1 ? 'is' : ''}`
           }
         </span>
         <button
@@ -122,7 +133,7 @@ export default function DocumentacoesTab() {
         </button>
       </div>
 
-      {canais.map(canal => {
+      {visivel.map(canal => {
         const editing = editingId === canal.id
         return (
           <div key={canal.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -149,6 +160,25 @@ export default function DocumentacoesTab() {
               ) : (
                 <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: canal.canal ? 'var(--text)' : 'var(--text3)' }}>
                   {canal.canal || 'Canal sem nome'}
+                </span>
+              )}
+              {editing ? (
+                <select
+                  value={canal.team || ''}
+                  onChange={e => updateCanal(canal.id, 'team', e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                  style={{ fontSize: 12, color: 'var(--text2)' }}
+                >
+                  <option value="">Todos os times</option>
+                  {teams.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+                </select>
+              ) : canal.team && (
+                <span style={{
+                  fontSize: 11, fontWeight: 600, color: 'var(--navy)',
+                  background: 'var(--surface)', border: '1px solid var(--border2)',
+                  borderRadius: 20, padding: '2px 8px',
+                }}>
+                  {canal.team}
                 </span>
               )}
               <span style={{ fontSize: 12, color: 'var(--text3)' }}>

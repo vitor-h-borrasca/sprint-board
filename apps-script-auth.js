@@ -2,20 +2,22 @@
  * SPRINT BOARD — Apps Script Completo
  * =====================================
  * Abas necessárias na planilha:
- *   - Usuarios    : A:email | B:hash | C:active | D:admin | E:reset_code | F:reset_expiry
- *   - Times       : A:nome  | B:areaPath | C:projetoIntegracao
- *   - sprint-data : A1 = JSON blob do board
+ *   - Usuarios       : A:email | B:hash | C:active | D:admin | E:reset_code | F:reset_expiry
+ *   - Times          : A:nome  | B:areaPath | C:projetoIntegracao
+ *   - sprint-data    : A1 = JSON blob do board
  *   - sprint-history : histórico de saves
- *   - PET         : tabela de iniciativas por time
- *   - PET-Config  : configurações por quarter por time
+ *   - PET            : tabela de iniciativas por time
+ *   - PET-Config     : configurações por quarter por time
+ *   - Documentacoes  : A:canal | B:rotulo | C:url | D:time (vazio = visível para todos os times)
  */
 
-const SHEET       = "sprint-data";
-const HIST        = "sprint-history";
-const AUTH_SHEET  = "Usuarios";
-const TEAMS_SHEET = "Times";
-const PET_SHEET   = "PET";
+const SHEET         = "sprint-data";
+const HIST          = "sprint-history";
+const AUTH_SHEET    = "Usuarios";
+const TEAMS_SHEET   = "Times";
+const PET_SHEET     = "PET";
 const PET_CFG_SHEET = "PET-Config";
+const DOCS_SHEET    = "Documentacoes";
 
 const RESET_EXPIRY_MS = 15 * 60 * 1000; // 15 minutos
 
@@ -23,12 +25,13 @@ function doGet(e) {
   const action = (e.parameter && e.parameter.action) || "load";
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  if (action === "login")          return handleLogin(e.parameter.user, e.parameter.pass);
-  if (action === "set_password")   return handleSetPassword(e.parameter.user, e.parameter.pass);
-  if (action === "get_teams")      return handleGetTeams();
-  if (action === "request_reset")  return handleRequestReset(e.parameter.user);
-  if (action === "verify_reset")   return handleVerifyReset(e.parameter.user, e.parameter.code, e.parameter.pass);
-  if (action === "load_pet")       return handleLoadPet(e.parameter.team);
+  if (action === "login")               return handleLogin(e.parameter.user, e.parameter.pass);
+  if (action === "set_password")        return handleSetPassword(e.parameter.user, e.parameter.pass);
+  if (action === "get_teams")           return handleGetTeams();
+  if (action === "request_reset")       return handleRequestReset(e.parameter.user);
+  if (action === "verify_reset")        return handleVerifyReset(e.parameter.user, e.parameter.code, e.parameter.pass);
+  if (action === "load_pet")            return handleLoadPet(e.parameter.team);
+  if (action === "load_documentacoes")  return handleLoadDocumentacoes(e.parameter.team);
 
   if (action === "history") {
     const sheet = ss.getSheetByName(HIST);
@@ -43,25 +46,114 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  const ss      = SpreadsheetApp.getActiveSpreadsheet();
-  const payload = JSON.parse(e.postData.contents);
+  // Serializa todos os writes (save_pet, save_documentacoes, save padrão do
+  // board) — sem isso, dois saves quase simultâneos podem interlear leitura
+  // e escrita na planilha e duplicar/perder linhas (já aconteceu).
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (err) {
+    return out(JSON.stringify({ ok: false, error: "Sistema ocupado, tente novamente em alguns segundos." }));
+  }
 
-  // Roteamento por action no payload
-  if (payload.action === "save_pet") return handleSavePet(payload, ss);
+  try {
+    const ss      = SpreadsheetApp.getActiveSpreadsheet();
+    const payload = JSON.parse(e.postData.contents);
 
-  // Save padrão do board (sprint-data)
-  const data = payload.data || payload;
+    if (payload.action === "save_pet")           return handleSavePet(payload, ss);
+    if (payload.action === "save_documentacoes") return handleSaveDocumentacoes(payload, ss);
 
-  let sheet = ss.getSheetByName(SHEET) || ss.insertSheet(SHEET);
-  sheet.getRange("A1").setValue(JSON.stringify(data));
+    // Qualquer action não reconhecida é rejeitada — nunca cai no save padrão
+    // do board por engano (ex.: cliente mais novo que o deploy atual chamando
+    // uma action que este deploy ainda não conhece).
+    if (payload.action) return out(JSON.stringify({ ok: false, error: "Action desconhecida: " + payload.action }));
 
-  let hist = ss.getSheetByName(HIST) || ss.insertSheet(HIST);
-  if (hist.getLastRow() === 0) hist.appendRow(["Timestamp","Sprint","Data"]);
-  hist.appendRow([new Date().toISOString(), payload.sprintName || "—", JSON.stringify(data)]);
-  const lastRow = hist.getLastRow();
-  if (lastRow > 51) hist.deleteRows(2, lastRow - 51);
+    // Save padrão do board (sprint-data)
+    const data = payload.data || payload;
+    if (!data || !Array.isArray(data.sprints)) {
+      return out(JSON.stringify({ ok: false, error: "Payload de board inválido — esperado { sprints: [...] }" }));
+    }
+
+    let sheet = ss.getSheetByName(SHEET) || ss.insertSheet(SHEET);
+    sheet.getRange("A1").setValue(JSON.stringify(data));
+
+    let hist = ss.getSheetByName(HIST) || ss.insertSheet(HIST);
+    if (hist.getLastRow() === 0) hist.appendRow(["Timestamp","Sprint","Data"]);
+    hist.appendRow([new Date().toISOString(), payload.sprintName || "—", JSON.stringify(data)]);
+    const lastRow = hist.getLastRow();
+    if (lastRow > 51) hist.deleteRows(2, lastRow - 51);
+
+    return out(JSON.stringify({ ok: true }));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ─── DOCUMENTAÇÕES ────────────────────────────────────────────────────────────
+
+/**
+ * Time vazio = canal "global" (visível para todos). Um save só substitui as
+ * linhas que o time chamador já podia ver (as suas + as globais), preservando
+ * canais exclusivos de outros times.
+ */
+function handleSaveDocumentacoes(payload, ss) {
+  const team   = String(payload.team || "").trim();
+  const canais = payload.canais || [];
+
+  let sheet = ss.getSheetByName(DOCS_SHEET) || ss.insertSheet(DOCS_SHEET);
+  const HEADERS = ["Canal", "Rótulo", "URL", "Time"];
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(HEADERS);
+    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+  } else if (!sheet.getRange(1, 4).getValue()) {
+    sheet.getRange(1, 4).setValue("Time").setFontWeight("bold");
+  }
+
+  if (sheet.getLastRow() > 1) {
+    const existing = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+    for (let i = existing.length - 1; i >= 0; i--) {
+      const rowTeam = String(existing[i][3] || "").trim();
+      if (rowTeam === "" || rowTeam === team) sheet.deleteRow(i + 2);
+    }
+  }
+
+  canais.forEach(canal => {
+    const canalTeam = String(canal.team || "").trim();
+    (canal.links || []).forEach(link => {
+      sheet.appendRow([canal.canal, link.label || "", link.url || "", canalTeam]);
+    });
+  });
 
   return out(JSON.stringify({ ok: true }));
+}
+
+function handleLoadDocumentacoes(team) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(DOCS_SHEET);
+  const teamTrim = String(team || "").trim();
+
+  if (!sheet || sheet.getLastRow() < 2) return out(JSON.stringify({ ok: true, canais: [] }));
+
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+
+  const map = {};
+  data.forEach(r => {
+    const rowTeam = String(r[3] || "").trim();
+    if (rowTeam !== "" && rowTeam !== teamTrim) return; // só globais + do próprio time
+
+    const canal = String(r[0] || "").trim();
+    const label = String(r[1] || "").trim();
+    const url   = String(r[2] || "").trim();
+    if (!canal) return;
+
+    const key = rowTeam + "|" + canal;
+    if (!map[key]) map[key] = { canal, team: rowTeam, links: [] };
+    map[key].links.push({ label, url });
+  });
+
+  const canais = Object.values(map);
+  return out(JSON.stringify({ ok: true, canais }));
 }
 
 // ─── PET ─────────────────────────────────────────────────────────────────────
