@@ -5,7 +5,7 @@ import { fetchTeams } from '@/domain/auth'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-const PBI_STATES     = ['Em Análise', 'Backlog', 'Em Desenvolvimento', 'Em Revisão', 'Done']
+const PBI_STATES     = ['New', 'Em Análise', 'Backlog', 'Em Desenvolvimento', 'Em Revisão', 'Done']
 const FEATURE_STATES = ['New', 'In Progress', 'Done', 'Removed']
 const CLASSIFICACOES = ['Negócio', 'Técnico']
 
@@ -383,6 +383,8 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
       const area = teamAreaPath || `${cfg.project}\\Marketplace Global`
 
       if (mode === 'criar') {
+        const numParentId = parentId.trim() ? parseInt(parentId.trim(), 10) : null
+
         let patch
         if (workItemType === 'pbi') {
           patch = [
@@ -397,6 +399,10 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
             { op: 'add', path: '/fields/Custom.ANY_Pais',     value: 'Brasil' },
             { op: 'add', path: '/fields/Custom.79a46532-b84a-4cac-8bf8-48dabf09c76c', value: 'Negócio' },
             { op: 'add', path: '/fields/Custom.ENTREGA_DE_VALOR', value: entregaDeValor },
+            // Obrigatório pelo processo do ANYMARKET; normalmente preenchido por automação
+            // ao vincular a Feature pai, mas essa automação roda async (não a tempo da
+            // validação de criação), então preenchemos direto.
+            { op: 'add', path: '/fields/Custom.FeatureVinculadaAoPBI_ANY', value: 'sim' },
             ...(assignedTo ? [{ op: 'add', path: '/fields/System.AssignedTo', value: assignedTo }] : []),
           ]
         } else {
@@ -418,12 +424,7 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
           ]
         }
 
-        const numParentId = parentId.trim() ? parseInt(parentId.trim(), 10) : null
         if (numParentId) {
-          // Precisa ir na mesma criação: o campo Custom.FeatureVinculadaAoPBI_ANY é
-          // preenchido por automação do ADO ao vincular a Feature pai, e só dispara
-          // se o vínculo já existir na mesma requisição (senão a criação falha com
-          // TF401320 - o campo obrigatório fica vazio).
           patch.push({ op: 'add', path: '/relations/-', value: {
             rel: 'System.LinkTypes.Hierarchy-Reverse',
             url: `https://dev.azure.com/${cfg.org}/${cfg.project}/_apis/wit/workItems/${numParentId}`,
