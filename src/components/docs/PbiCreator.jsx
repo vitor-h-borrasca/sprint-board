@@ -418,24 +418,22 @@ export default function PbiCreator({ defaultType = 'pbi' }) {
           ]
         }
 
+        const numParentId = parentId.trim() ? parseInt(parentId.trim(), 10) : null
+        if (numParentId) {
+          // Precisa ir na mesma criação: o campo Custom.FeatureVinculadaAoPBI_ANY é
+          // preenchido por automação do ADO ao vincular a Feature pai, e só dispara
+          // se o vínculo já existir na mesma requisição (senão a criação falha com
+          // TF401320 - o campo obrigatório fica vazio).
+          patch.push({ op: 'add', path: '/relations/-', value: {
+            rel: 'System.LinkTypes.Hierarchy-Reverse',
+            url: `https://dev.azure.com/${cfg.org}/${cfg.project}/_apis/wit/workItems/${numParentId}`,
+            attributes: { comment: 'Vinculado via Sprint Board' },
+          }})
+        }
+
         const wiType = workItemType === 'pbi' ? 'Product%20Backlog%20Item' : 'Feature'
         const data = await adoPost(`${ADO(cfg.org, cfg.project)}/workitems/$${wiType}?api-version=7.1`, cfg.pat, patch)
         const newId = data.id
-
-        if (parentId.trim()) {
-          const numId = parseInt(parentId.trim(), 10)
-          if (numId) {
-            await adoPatch(
-              `${ADO(cfg.org, cfg.project)}/workitems/${newId}?api-version=7.1`,
-              cfg.pat,
-              [{ op: 'add', path: '/relations/-', value: {
-                rel: 'System.LinkTypes.Hierarchy-Reverse',
-                url: `https://dev.azure.com/${cfg.org}/${cfg.project}/_apis/wit/workItems/${numId}`,
-                attributes: { comment: 'Vinculado via Sprint Board' },
-              }}]
-            )
-          }
-        }
 
         const url = `https://dev.azure.com/${cfg.org}/${cfg.project}/_workitems/edit/${newId}`
         setResult({ ok: true, message: `${workItemType === 'pbi' ? 'PBI' : 'Feature'} #${newId} criado com sucesso!`, url })
