@@ -133,8 +133,11 @@ function extractSection(md, headingPattern) {
 }
 
 function extractTitle(md, fileName) {
-  const h1 = md.match(/^#\s+(.+)/m)
-  if (h1) return h1[1].trim()
+  const text = md.replace(/\r\n/g, '\n')
+  const atx = text.match(/^#(?!#)[ \t]*(.+)$/m)
+  if (atx) return atx[1].trim()
+  const setext = text.match(/^([ \t]*[^\s#][^\n]*)\n=+[ \t]*$/m)
+  if (setext) return setext[1].trim()
   if (fileName) return fileName.replace(/\.md$/i, '').replace(/[-_]/g, ' ')
   return 'Novo item'
 }
